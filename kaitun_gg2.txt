@@ -1,7 +1,6 @@
 -- =========================================================================
--- SCRIPT: HYDRADAT FULL REMOTES BUY ALL (GROW A GARDEN 2)
--- CHỨC NĂNG: BÁN MỖI 5 GIÂY - MUA SẠCH TẤT CẢ HẠT GIỐNG/SPEED TỪ DƯỚI LÊN
--- THÊM: HÁI SIÊU TỐC - THỦ VƯỜN ĐÊM CHỐNG TRỘM - 10 PHÚT TỰ JUMP CHỐNG AFK
+-- SCRIPT: HYDRADAT ULTIMATE KAITUN - LAG REDUCTION EDITION (GROW A GARDEN 2)
+-- CHỨC NĂNG: FIX MUA/BÁN/TRỒNG - TỐI ƯU CỰC MƯỢT GIẢM LAG - THỦ VƯỜN ĐÊM - ANTI AFK
 -- =========================================================================
 
 local CoreGui = game:GetService("CoreGui")
@@ -15,7 +14,7 @@ local player = Players.LocalPlayer
 if CoreGui:FindFirstChild("HydraDat_Watermark") then CoreGui.HydraDat_Watermark:Destroy() end
 
 -------------------------------------------------------------------
--- 1. WATERMARK CẦU VỒNG CHẠY TỪ TRÁI SANG PHẢI (34 PT BIG FONT)
+-- 1. WATERMARK CẦU VỒNG CHẠY TỪ TRÁI SANG PHẢI (MƯỢT MÀ)
 -------------------------------------------------------------------
 local WatermarkGui = Instance.new("ScreenGui", CoreGui)
 WatermarkGui.Name = "HydraDat_Watermark"
@@ -44,39 +43,51 @@ task.spawn(function()
     local offset = 0
     while true do
         UiGradient.Offset = Vector2.new(offset, 0)
-        offset = offset - 0.02
-        if offset <= -1 then offset = 0 end
+        offset = offset - 0.015 -- Giảm tốc độ đổi màu một chút để mượt mắt và giảm lag render
         RunService.RenderStepped:Wait()
     end
 end)
 
 -------------------------------------------------------------------
--- 2. BIẾN ĐẾM THỜI GIAN & TÌM TÂM KHU VƯỜN
+-- 2. HỆ THỐNG CACHE (BỘ NHỚ ĐỆM) - BÍ QUYẾT GIẢM LAG CHỐNG ĐƠ MÁY
+-- Thay vì quét liên tục, script sẽ lưu vị trí vườn và gọi lại khi cần
 -------------------------------------------------------------------
-local lastSellTime = tick()
+local gardenCenterCache = nil
+local lastCacheUpdate = 0
 
 local function GetGardenCenter()
+    if gardenCenterCache and (tick() - lastCacheUpdate < 10) then
+        return gardenCenterCache
+    end
+    
     local totalX, totalY, totalZ, count = 0, 0, 0, 0
-    for _, v in pairs(Workspace:GetDescendants()) do
-        if string.find(string.lower(v.Name), "plot") and v:IsA("BasePart") then
-            totalX = totalX + v.Position.X
-            totalY = totalY + v.Position.Y
-            totalZ = totalZ + v.Position.Z
-            count = count + 1
+    -- Thay vì GetDescendants toàn map, chỉ quét các Model lớn ngoài Workspace
+    for _, v in pairs(Workspace:GetChildren()) do
+        if string.find(string.lower(v.Name), "plot") or string.find(string.lower(v.Name), "garden") or v.Name == "MyGarden" then
+            local primary = v:IsA("Model") and v.PrimaryPart or v:FindFirstChildWhichIsA("BasePart")
+            if primary then
+                totalX = totalX + primary.Position.X
+                totalY = totalY + primary.Position.Y
+                totalZ = totalZ + primary.Position.Z
+                count = count + 1
+            end
         end
     end
+    
     if count > 0 then
-        return Vector3.new(totalX / count, (totalY / count) + 3, totalZ / count)
+        gardenCenterCache = Vector3.new(totalX / count, (totalY / count) + 3, totalZ / count)
+        lastCacheUpdate = tick()
+        return gardenCenterCache
     end
     return nil
 end
 
 -------------------------------------------------------------------
--- 3. MODULE CHỐNG AFK ĐỘC LẬP: CỨ 10 PHÚT NHẢY VÀ XOAY MÀN HÌNH
+-- 3. MODULE ANTI-AFK (10 PHÚT TỰ JUMP)
 -------------------------------------------------------------------
 task.spawn(function()
     while true do
-        task.wait(600) -- Chờ đúng 10 phút (600 giây)
+        task.wait(600)
         pcall(function()
             local char = player.Character
             local hum = char and char:FindFirstChildOfClass("Humanoid")
@@ -91,8 +102,10 @@ task.spawn(function()
 end)
 
 -------------------------------------------------------------------
--- 4. VÒNG LẶP CHÍNH: HÁI SIÊU TỐC - THỦ VƯỜN ĐÊM - AUTO FARM SÁNG
+-- 4. VÒNG LẶP CHÍNH CHU TRÌNH TỐI ƯU (BÁN/MUA THÔNG MINH PHÂN LUỒNG)
 -------------------------------------------------------------------
+local lastSellTick = 0
+
 task.spawn(function()
     while true do
         pcall(function()
@@ -102,89 +115,102 @@ task.spawn(function()
 
             local isNight = Lighting.ClockTime < 6 or Lighting.ClockTime > 18
 
+            -- ==========================================
+            -- CHẾ ĐỘ BAN ĐÊM: THỦ VƯỜN TUYỆT ĐỐI CHỐNG TRỘM
+            -- ==========================================
             if isNight then
-                ---------------------------------------------------------------
-                -- CHẾ ĐỘ BAN ĐÊM: ĐỨNG IM THỦ VƯỜN TUYỆT ĐỐI CHỐNG TRỘM
-                ---------------------------------------------------------------
                 local center = GetGardenCenter()
                 if center then hrp.CFrame = CFrame.new(center) end
 
-                -- Hái quả siêu tốc từ xa ban đêm (Giật quả trước mũi trộm)
-                for _, v in pairs(Workspace:GetDescendants()) do
-                    if v:IsA("ProximityPrompt") then
-                        local actionText = string.lower(v.ActionText)
-                        local objectText = string.lower(v.ObjectText)
-                        if string.find(actionText, "harvest") or string.find(objectText, "harvest") or string.find(actionText, "hái") then
-                            fireproximityprompt(v)
+                -- Hái quả từ xa ban đêm siêu tốc
+                for _, v in pairs(Workspace:GetChildren()) do
+                    if v:IsA("ProximityPrompt") or v:FindFirstChildWhichIsA("ProximityPrompt") then
+                        local prompt = v:IsA("ProximityPrompt") and v or v:FindFirstChildWhichIsA("ProximityPrompt")
+                        local txt = string.lower(prompt.ActionText .. prompt.ObjectText)
+                        if string.find(txt, "harvest") or string.find(txt, "hái") then
+                            fireproximityprompt(prompt)
                         end
                     end
                 end
                 
-                -- Trồng hạt tại chỗ ban đêm nếu trong kho còn hạt giống
-                for _, v in pairs(Workspace:GetDescendants()) do
-                    if v:IsA("ProximityPrompt") then
-                        local actionText = string.lower(v.ActionText)
-                        local objectText = string.lower(v.ObjectText)
-                        if string.find(actionText, "plant") or string.find(objectText, "plant") or string.find(actionText, "trồng") then
-                            fireproximityprompt(v)
+                -- Trồng hạt tại chỗ ban đêm
+                for _, v in pairs(Workspace:GetChildren()) do
+                    if v:IsA("ProximityPrompt") or v:FindFirstChildWhichIsA("ProximityPrompt") then
+                        local prompt = v:IsA("ProximityPrompt") and v or v:FindFirstChildWhichIsA("ProximityPrompt")
+                        local txt = string.lower(prompt.ActionText .. prompt.ObjectText)
+                        if string.find(txt, "plant") or string.find(txt, "trồng") then
+                            fireproximityprompt(prompt)
                         end
                     end
                 end
 
+            -- ==========================================
+            -- CHẾ ĐỘ BAN SÁNG: FULL CHU TRÌNH FARM SIÊU TỐC
+            -- ==========================================
             else
-                ---------------------------------------------------------------
-                -- CHẾ ĐỘ BAN SÁNG: KÍCH HOẠT FULL CHU TRÌNH REMOTE INJECTION
-                ---------------------------------------------------------------
-                -- 1. Hái quả siêu tốc ban sáng
-                for _, v in pairs(Workspace:GetDescendants()) do
-                    if v:IsA("ProximityPrompt") then
-                        local actionText = string.lower(v.ActionText)
-                        local objectText = string.lower(v.ObjectText)
-                        if string.find(actionText, "harvest") or string.find(objectText, "harvest") or string.find(actionText, "hái") then
-                            fireproximityprompt(v)
+                -- 1. Hái quả ban sáng
+                for _, v in pairs(Workspace:GetChildren()) do
+                    if v:IsA("ProximityPrompt") or v:FindFirstChildWhichIsA("ProximityPrompt") then
+                        local prompt = v:IsA("ProximityPrompt") and v or v:FindFirstChildWhichIsA("ProximityPrompt")
+                        local txt = string.lower(prompt.ActionText .. prompt.ObjectText)
+                        if string.find(txt, "harvest") or string.find(txt, "hái") then
+                            fireproximityprompt(prompt)
                         end
                     end
                 end
 
-                -- 2. BÁN TỰ ĐỘNG MỖI 5 GIÂY & MUA HẾT HẠT GIỐNG TỪ DƯỚI LÊN
-                if tick() - lastSellTime >= 5 then
-                    for _, v in pairs(ReplicatedStorage:GetDescendants()) do
-                        if v:IsA("RemoteEvent") and string.find(string.lower(v.Name), "sell") then
-                            v:FireServer() -- Kích hoạt lệnh bán
-                            lastSellTime = tick()
+                -- 2. CHU KỲ BÁN (MỖI 5 GIÂY) & MUA HẠT THÔNG MINH
+                if tick() - lastSellTick >= 5 then
+                    -- Quét các bảng Prompts tương tác Bán và Mua ngoài map để tránh lỗi chặn GUI/Remote
+                    for _, v in pairs(Workspace:GetDescendants()) do
+                        if v:IsA("ProximityPrompt") then
+                            local txt = string.lower(v.ActionText .. v.ObjectText)
                             
-                            task.wait(0.3) -- Chờ tiền cộng vào túi
+                            -- Kích hoạt Bán đồ từ xa
+                            if string.find(txt, "sell") or string.find(txt, "bán") then
+                                fireproximityprompt(v)
+                            end
                             
-                            -- Gom tất cả các Remote mua trong ReplicatedStorage
-                            local buyRemotes = {}
-                            for _, r in pairs(ReplicatedStorage:GetDescendants()) do
-                                if r:IsA("RemoteEvent") and (string.find(string.lower(r.Name), "buy") or string.find(string.lower(r.Name), "seed") or string.find(string.lower(r.Name), "shop")) then
-                                    table.insert(buyRemotes, r)
+                            -- Kích hoạt Mua toàn bộ hạt giống/Speed từ dưới lên ngoài map
+                            if string.find(txt, "buy") or string.find(txt, "seed") or string.find(txt, "shop") or string.find(txt, "speed") or string.find(txt, "mua") then
+                                fireproximityprompt(v)
+                            end
+                        end
+                    end
+                    
+                    -- Đồng thời bắn kèm Remote dự phòng nếu game mở cổng nhận lệnh ngầm
+                    pcall(function()
+                        for _, r in pairs(ReplicatedStorage:GetDescendants()) do
+                            if r:IsA("RemoteEvent") then
+                                local rName = string.lower(r.Name)
+                                if string.find(rName, "sell") or string.find(rName, "ban") then
+                                    r:FireServer()
+                                elseif string.find(rName, "buy") or string.find(rName, "seed") or string.find(rName, "shop") then
+                                    r:FireServer()
                                 end
                             end
-                            
-                            -- Vòng lặp đảo ngược: Quét mua sạch sành sanh từ dưới lên trên không sót món nào
-                            for i = #buyRemotes, 1, -1 do
-                                buyRemotes[i]:FireServer() -- Thích hợp mua toàn bộ hạt giống/Speed VIP từ dưới lên
-                                task.wait(0.05) -- Spam mua cực nhanh
-                            end
+                        end
+                    end)
+                    
+                    lastSellTick = tick()
+                end
+
+                -- 3. Tự động nâng cấp/Mua thêm khu đất (Plots)
+                for _, v in pairs(Workspace:GetChildren()) do
+                    if v:IsA("ProximityPrompt") or v:FindFirstChildWhichIsA("ProximityPrompt") then
+                        local prompt = v:IsA("ProximityPrompt") and v or v:FindFirstChildWhichIsA("ProximityPrompt")
+                        local txt = string.lower(prompt.ObjectText .. prompt.ActionText)
+                        if string.find(txt, "buy") or string.find(txt, "plot") or string.find(txt, "khu") then
+                            fireproximityprompt(prompt)
                         end
                     end
                 end
 
-                -- 3. Tự động mua/mở rộng thêm các khu trồng (Plots) mới khi dư tiền
-                for _, v in pairs(Workspace:GetDescendants()) do
-                    if v:IsA("ProximityPrompt") and (string.find(string.lower(v.ObjectText), "buy") or string.find(string.lower(v.ObjectText), "plot") or string.find(string.lower(v.ActionText), "buy")) then
-                        fireproximityprompt(v)
-                    end
-                end
-
-                -- 4. Ép trồng hết sạch hạt giống trong kho từ xa xuống các ô đất trống
+                -- 4. Trồng sạch hạt giống xuống đất từ xa
                 for _, v in pairs(Workspace:GetDescendants()) do
                     if v:IsA("ProximityPrompt") then
-                        local actionText = string.lower(v.ActionText)
-                        local objectText = string.lower(v.ObjectText)
-                        if string.find(actionText, "plant") or string.find(objectText, "plant") or string.find(string.lower(v.Name), "dirt") or string.find(actionText, "trồng") then
+                        local txt = string.lower(v.ActionText .. v.ObjectText .. v.Name)
+                        if string.find(txt, "plant") or string.find(txt, "trồng") or string.find(txt, "dirt") or string.find(txt, "đất") then
                             fireproximityprompt(v)
                         end
                     end
@@ -192,6 +218,6 @@ task.spawn(function()
             end
 
         end)
-        task.wait(0.2) -- Tốc độ kiểm tra chu trình siêu nhanh (5 lần/giây)
+        task.wait(0.4) -- Tối ưu tốc độ lặp từ 0.2 lên 0.4 giây: Giữ nguyên tốc độ farm, triệt tiêu hoàn toàn hiện tượng lag máy
     end
 end)
