@@ -1,6 +1,6 @@
- -- =========================================================================
--- SCRIPT COMPLETED: HYDRADAT UNIVERSAL AUTO-FARM (GROW A GARDEN 2)
--- CHỨC NĂNG: TỰ ĐỘNG QUÉT VẬT THỂ TOÀN BỘ MAP - CHẠY LUÔN KHÔNG CẦN TÊN CHUẨN
+-- =========================================================================
+-- SCRIPT: HYDRADAT FIX LỖI ĐỊNH VỊ + PHÓNG TO CHỮ BIG FONT (GROW A GARDEN 2)
+-- CHỨC NĂNG: CHẠY LUÔN - WATERMARK TO ĐẸP - CHỈ TƯƠNG TÁC ĐÚNG MỤC TIÊU
 -- =========================================================================
 
 local CoreGui = game:GetService("CoreGui")
@@ -11,30 +11,28 @@ local player = game.Players.LocalPlayer
 if CoreGui:FindFirstChild("HydraDat_Watermark") then CoreGui.HydraDat_Watermark:Destroy() end
 
 -------------------------------------------------------------------
--- CẤU HÌNH: BẠN CHỈ CẦN THAY TOẠ ĐỘ (X, Y, Z) Ở ĐÂY LÀ CHẠY ĐƯỢC
--------------------------------------------------------------------
-local Positions = {
-    MyGarden = Vector3.new(0, 5, 0),       -- ◄ Thay tọa độ Vườn của bạn vào đây
-    FruitShop = Vector3.new(100, 5, 50),   -- ◄ Thay tọa độ Shop Bán vào đây
-    SeedShop = Vector3.new(120, 5, 60)     -- ◄ Thay tọa độ Shop Mua vào đây
-}
-
--------------------------------------------------------------------
--- 1. WATERMARK TIKTOK: HYDRADAT
+-- 1. WATERMARK TIKTOK: HYDRADAT (PHÓNG TO & ĐỔI KIỂU CHỮ)
 -------------------------------------------------------------------
 local WatermarkGui = Instance.new("ScreenGui", CoreGui)
 WatermarkGui.Name = "HydraDat_Watermark"
 
 local WatermarkLabel = Instance.new("TextLabel", WatermarkGui)
-WatermarkLabel.Size = UDim2.new(0, 400, 0, 50)
-WatermarkLabel.Position = UDim2.new(0.5, -200, 0.35, -25)
+-- Tăng kích thước khung chứa chữ để không bị xuống dòng
+WatermarkLabel.Size = UDim2.new(0, 600, 0, 70)
+-- Giữ nguyên vị trí chính giữa màn hình (nhích lên một chút)
+WatermarkLabel.Position = UDim2.new(0.5, -300, 0.35, -35)
 WatermarkLabel.BackgroundTransparency = 1
-WatermarkLabel.Text = "tiktok: hydradat"
-WatermarkLabel.TextSize = 28
+
+-- Thay đổi nội dung chữ sang kiểu đặc biệt của bạn
+WatermarkLabel.Text = "ＴＩＫＴＯＫ:ＨＹＤＲＡＤＡＴ"
+-- Phóng to kích cỡ chữ từ 28 lên 34 cực kỳ nổi bật
+WatermarkLabel.TextSize = 34 
+
 WatermarkLabel.Font = Enum.Font.GothamBold
-WatermarkLabel.TextStrokeTransparency = 0.2
+WatermarkLabel.TextStrokeTransparency = 0.15 -- Làm bóng đổ đậm nét hơn
 WatermarkLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
 
+-- Vòng lặp đổi màu RGB mượt mà cho Watermark
 task.spawn(function()
     while true do
         for hue = 0, 1, 0.004 do
@@ -45,68 +43,76 @@ task.spawn(function()
 end)
 
 -------------------------------------------------------------------
--- 2. HÀM DỊCH CHUYỂN & TỰ ĐỘNG KÍCH HOẠT PHẠM VI
+-- 2. HÀM TƯƠNG TÁC AN TOÀN (CHỈ BẤM KHI ĐỨNG SÁT)
 -------------------------------------------------------------------
-local function TeleportTo(position)
+local function TeleportAndInteract(targetPart)
     local char = player.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        hrp.CFrame = CFrame.new(position)
-        task.wait(0.3) -- Đợi game tải thực thể xung quanh vị trí mới
-    end
-end
+    if not hrp or not targetPart then return end
 
--- Hàm quét xung quanh nhân vật, cứ thấy nút bấm E (ProximityPrompt) là bấm sạch
-local function InteractNearby()
-    local char = player.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
+    -- Dí thẳng nhân vật lên trên đầu vật thể 2 ô (tránh kẹt đất)
+    hrp.CFrame = targetPart.CFrame * CFrame.new(0, 2, 0)
+    task.wait(0.2)
 
-    for _, v in pairs(Workspace:GetDescendants()) do
-        if v:IsA("ProximityPrompt") then
-            -- Kiểm tra khoảng cách giữa nhân vật và nút bấm (dưới 20 ô)
-            local part = v.Parent:IsA("BasePart") and v.Parent or v.Parent:FindFirstChildWhichIsA("BasePart")
-            if part then
-                local distance = (hrp.Position - part.Position).Magnitude
-                if distance < 20 then
-                    fireproximityprompt(v)
-                    task.wait(0.05)
-                end
-            end
-        end
+    -- Tìm nút bấm E bên trong vật thể đó
+    local prompt = targetPart:FindFirstChildOfClass("ProximityPrompt") or targetPart.Parent:FindFirstChildOfClass("ProximityPrompt")
+    if prompt then
+        fireproximityprompt(prompt)
+        task.wait(0.1)
     end
 end
 
 -------------------------------------------------------------------
--- 3. VÒNG LẶP LIÊN HOÀN TỰ ĐỘNG CHẠY LUÔN
+-- 3. VÒNG LẶP AUTO FARM CHUẨN ĐÍCH
 -------------------------------------------------------------------
 task.spawn(function()
     while true do
         pcall(function()
-            -- BƯỚC 1: Biến về vườn và tự động hút sạch nông sản / quả chín
-            TeleportTo(Positions.MyGarden)
-            for i = 1, 5 do -- Lặp lại 5 lần quét để nhặt sạch các ô đất
-                InteractNearby()
-                task.wait(0.2)
+            -- BƯỚC 1: QUÉT TOÀN BỘ MAP TÌM CÁC Ô ĐẤT CÓ THỂ THU HOẠCH
+            local dynamicPlots = {}
+            for _, v in pairs(Workspace:GetDescendants()) do
+                if string.find(string.lower(v.Name), "plot") or v:FindFirstChild("IsRipe") then
+                    table.insert(dynamicPlots, v)
+                end
             end
 
-            -- BƯỚC 2: Biến đến shop bán và tự kích hoạt nút bán của NPC
-            TeleportTo(Positions.FruitShop)
-            InteractNearby()
-            task.wait(0.5)
-
-            -- BƯỚC 3: Biến đến shop hạt giống và tự kích hoạt nút mua của NPC
-            TeleportTo(Positions.SeedShop)
-            InteractNearby()
-            task.wait(0.5)
-
-            -- BƯỚC 4: Quay về vườn để tự động gieo hạt giống xuống đất trống
-            TeleportTo(Positions.MyGarden)
-            for i = 1, 5 do
-                InteractNearby()
-                task.wait(0.2)
+            -- Đi đến từng ô đất để hái trái
+            local hasFruits = false
+            for _, plot in pairs(dynamicPlots) do
+                TeleportAndInteract(plot)
+                hasFruits = true 
             end
+
+            -- BƯỚC 2: TÌM NPC BÁN NÔNG SẢN VÀ LAO ĐẾN BẤM
+            if hasFruits then
+                for _, v in pairs(Workspace:GetDescendants()) do
+                    if string.find(string.lower(v.Name), "sell") or string.find(string.lower(v.Name), "ban") then
+                        if v:IsA("BasePart") or v:IsA("MeshPart") then
+                            TeleportAndInteract(v)
+                            task.wait(0.5)
+                            break
+                        end
+                    end
+                end
+            end
+
+            -- BƯỚC 3: TÌM NPC MUA HẠT GIỐNG VÀ LAO ĐẾN BẤM
+            for _, v in pairs(Workspace:GetDescendants()) do
+                if string.find(string.lower(v.Name), "shop") or string.find(string.lower(v.Name), "seed") or string.find(string.lower(v.Name), "mua") then
+                    if v:IsA("BasePart") or v:IsA("MeshPart") then
+                        TeleportAndInteract(v)
+                        task.wait(0.5)
+                        break
+                    end
+                end
+            end
+
+            -- BƯỚC 4: QUAY LẠI CÁC Ô ĐẤT ĐỂ TRỒNG LẠI
+            for _, plot in pairs(dynamicPlots) do
+                TeleportAndInteract(plot)
+            end
+
         end)
-        task.wait(1)
+        task.wait(2) -- Nghỉ 2 giây trước khi làm vòng mới
     end
 end)
