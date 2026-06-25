@@ -1,0 +1,117 @@
+-- =========================================================================
+-- SCRIPT COMPLETED: HYDRADAT INSTANT AUTO-FARM (GROW A GARDEN 2)
+-- CHỨC NĂNG: MỞ PHÁT TỰ CHẠY LUÔN - WATERMARK RGB ĐẸP MẮT
+-- =========================================================================
+
+local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local player = game.Players.LocalPlayer
+
+-- Xóa các bản chạy cũ để tránh trùng lặp hệ thống
+if CoreGui:FindFirstChild("HydraDat_Watermark") then CoreGui.HydraDat_Watermark:Destroy() end
+
+-- ĐƯỜNG DẪN REMOTE TELEPORT (Hãy dùng SimpleSpy kiểm tra để sửa lại tên cho chuẩn)
+local TeleportRemote = ReplicatedStorage:FindFirstChild("TeleportRemote") or (ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Teleport"))
+
+-------------------------------------------------------------------
+-- 1. TẠO WATERMARK "TIKTOK: HYDRADAT" ĐỔI MÀU GIỮA MÀN HÌNH
+-------------------------------------------------------------------
+local WatermarkGui = Instance.new("ScreenGui", CoreGui)
+WatermarkGui.Name = "HydraDat_Watermark"
+
+local WatermarkLabel = Instance.new("TextLabel", WatermarkGui)
+WatermarkLabel.Size = UDim2.new(0, 400, 0, 50)
+WatermarkLabel.Position = UDim2.new(0.5, -200, 0.35, -25) -- Nằm ở nửa trên màn hình một chút cho đẹp
+WatermarkLabel.BackgroundTransparency = 1
+WatermarkLabel.Text = "tiktok: hydradat"
+WatermarkLabel.TextSize = 28
+WatermarkLabel.Font = Enum.Font.GothamBold -- Kiểu chữ bo góc hiện đại, dày dặn
+WatermarkLabel.TextStrokeTransparency = 0.2
+WatermarkLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+
+-- Vòng lặp đổi màu RGB mượt mà cho Watermark
+task.spawn(function()
+    while true do
+        for hue = 0, 1, 0.004 do
+            WatermarkLabel.TextColor3 = Color3.fromHSV(hue, 1, 1)
+            RunService.RenderStepped:Wait()
+        end
+    end
+end)
+
+-------------------------------------------------------------------
+-- 2. HÀM CHỨC NĂNG HỖ TRỢ AUTO
+-------------------------------------------------------------------
+local function GameTeleport(destinationName)
+    if TeleportRemote then
+        if TeleportRemote:IsA("RemoteEvent") then
+            TeleportRemote:FireServer(destinationName)
+        elseif TeleportRemote:IsA("RemoteFunction") then
+            TeleportRemote:InvokeServer(destinationName)
+        end
+        task.wait(0.5) -- Đợi map tải
+    end
+end
+
+local function AutoInteract(object)
+    if not object then return end
+    local prompt = object:FindFirstChildOfClass("ProximityPrompt") or object:Parent:FindFirstChildOfClass("ProximityPrompt")
+    if prompt then
+        fireproximityprompt(prompt)
+    end
+end
+
+-------------------------------------------------------------------
+-- 3. VÒNG LẶP AUTO LIÊN HOÀN (BẬT PHÁT TỰ CHẠY LUÔN - KHÔNG DỪNG)
+-------------------------------------------------------------------
+print("Hệ thống HydraDat GG2: Đang tự động kích hoạt Auto Farm...")
+
+task.spawn(function()
+    while true do
+        pcall(function()
+            local char = player.Character
+            if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+
+            -- BƯỚC 1: Về vườn thu hoạch trái chín
+            GameTeleport("MyGarden") -- ◄ Thay bằng tên địa điểm Vườn thật nếu cần
+            
+            local hasFruits = false
+            -- Quét các ô đất trong game (Ví dụ: Workspace.Plots)
+            for _, plot in pairs(Workspace:FindFirstChild("Plots"):GetChildren()) do
+                if plot:FindFirstChild("IsRipe") and plot.IsRipe.Value == true then -- ◄ Thay điều kiện cây chín
+                    hasFruits = true
+                    char.HumanoidRootPart.CFrame = plot.HumanoidRootPart.CFrame * CFrame.new(0, 2, 0)
+                    task.wait(0.1)
+                    AutoInteract(plot)
+                end
+            end
+
+            -- BƯỚC 2: Đến khu bán nếu có nông sản
+            if hasFruits then
+                GameTeleport("FruitShop") -- ◄ Thay bằng tên địa điểm Shop Bán thật nếu cần
+                local npcBan = Workspace:FindFirstChild("NPC_Ban")
+                AutoInteract(npcBan)
+                task.wait(0.3)
+            end
+
+            -- BƯỚC 3: Đến khu mua hạt giống
+            GameTeleport("SeedShop") -- ◄ Thay bằng tên địa điểm Shop Mua thật nếu cần
+            local npcMua = Workspace:FindFirstChild("NPC_MuaSeeds")
+            AutoInteract(npcMua)
+            task.wait(0.3)
+
+            -- BƯỚC 4: Quay lại vườn và trồng xuống các ô trống
+            GameTeleport("MyGarden")
+            for _, plot in pairs(Workspace:FindFirstChild("Plots"):GetChildren()) do
+                if plot:FindFirstChild("IsEmpty") and plot.IsEmpty.Value == true then -- ◄ Thay điều kiện ô đất trống
+                    char.HumanoidRootPart.CFrame = plot.HumanoidRootPart.CFrame * CFrame.new(0, 2, 0)
+                    task.wait(0.1)
+                    AutoInteract(plot)
+                end
+            end
+        end)
+        task.wait(1) -- Chu kỳ quét lại hệ thống
+    end
+end)
