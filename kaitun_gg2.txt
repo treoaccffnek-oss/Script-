@@ -1,6 +1,6 @@
 -- =========================================================================
--- SCRIPT: HYDRADAT REAL-TIME CYCLE - CUSTOM GG2 (GROW A GARDEN 2)
--- CHỨC NĂNG: FIX QUÉT NGÀY ĐÊM CHUẨN GG2 - 10S TELE BÁN/MUA SÁNG - ĐÊM THỦ VƯỜN
+-- SCRIPT: HYDRADAT FIX 100% - AUTO PLANT SEEDS & SPEED (GROW A GARDEN 2)
+-- CHỨC NĂNG: FIX LỖI BẬT KHÔNG LÊN - TỰ TRỒNG SPEED TRONG KHO - THỦ VƯỜN ĐÊM
 -- =========================================================================
 
 local CoreGui = game:GetService("CoreGui")
@@ -10,8 +10,23 @@ local Lighting = game:GetService("Lighting")
 local player = Players.LocalPlayer
 
 -------------------------------------------------------------------
--- 1. HÀM TÌM SHOP PROMPTS & TÂM VƯỜN
+-- 1. HÀM ĐỊNH VỊ VƯỜN (SỬA LỖI KHÔNG LÊN SCRIPT)
 -------------------------------------------------------------------
+local gardenCenterCache = nil
+
+local function GetGardenCenter()
+    if gardenCenterCache then return gardenCenterCache end
+    
+    -- Quét sâu một lần duy nhất để tìm mảnh đất của bạn nhằm tránh lỗi kẹt script
+    for _, v in pairs(Workspace:GetDescendants()) do
+        if v:IsA("BasePart") and (string.find(string.lower(v.Name), "plot") or string.find(string.lower(v.Name), "dirt")) then
+            gardenCenterCache = v.Position + Vector3.new(0, 5, 0)
+            return gardenCenterCache
+        end
+    end
+    return Vector3.new(0, 20, 0) -- Vị trí dự phòng nếu map chưa kịp tải
+end
+
 local function FindShopPrompt(keywords)
     for _, v in pairs(Workspace:GetDescendants()) do
         if v:IsA("ProximityPrompt") then
@@ -24,17 +39,8 @@ local function FindShopPrompt(keywords)
     return nil
 end
 
-local function GetGardenCenter()
-    for _, v in pairs(Workspace:GetChildren()) do
-        if string.find(string.lower(v.Name), "plot") or v.Name == "MyGarden" then
-            return v:IsA("Model") and v.PrimaryPart and v.PrimaryPart.Position or nil
-        end
-    end
-    return nil
-end
-
 -------------------------------------------------------------------
--- 2. ANTI-AFK CHỐNG KICK (10 PHÚT TỰ NHẢY ĐỘC LẬP)
+-- 2. ANTI-AFK (10 PHÚT TỰ NHẢY CHỐNG KICK)
 -------------------------------------------------------------------
 task.spawn(function()
     while true do
@@ -48,58 +54,67 @@ task.spawn(function()
 end)
 
 -------------------------------------------------------------------
--- 3. VÒNG LẶP CHÍNH THÍCH ỨNG THEO CHU KỲ 7 PHÚT SÁNG / 2 PHÚT TỐI
+-- 3. VÒNG LẶP CHÍNH: FULL CHU TRÌNH FARM & TỰ TRỒNG SPEED TRONG KHO
 -------------------------------------------------------------------
 local lastActionTick = tick()
 
 task.spawn(function()
     while true do
-        task.wait(0.5) -- Giữ game mượt mà 100%, không lag máy
+        task.wait(0.4) -- Giữ game mượt mà, không lag máy
         pcall(function()
             local char = player.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
             if not hrp then return end
 
-            -- CƠ CHẾ QUÉT MỚI: Kiểm tra độ sáng môi trường của Game để nhận biết đêm 2 phút
-            -- Khi trời tối hẳn, OutdoorAmbient.R thường sẽ giảm xuống dưới mức 50
+            -- Quét ngày đêm dựa trên ánh sáng chuẩn của GG2
             local isNight = Lighting.OutdoorAmbient.R < 55
 
-            -- TỰ ĐỘNG HÁI QUẢ (CHẠY LIÊN TỤC TRONG CẢ 3 GIAI ĐOẠN)
-            for _, v in pairs(Workspace:GetChildren()) do
-                local p = v:IsA("ProximityPrompt") and v or v:FindFirstChildWhichIsA("ProximityPrompt")
-                if p and string.find(string.lower(p.ActionText), "harv") then
-                    fireproximityprompt(p)
+            -- [LUÔN LUÔN CHẠY] TỰ ĐỘNG HÁI QUẢ SIÊU TỐC TỪ XA
+            for _, v in pairs(Workspace:GetDescendants()) do
+                if v:IsA("ProximityPrompt") then
+                    local txt = string.lower(v.ActionText .. v.ObjectText)
+                    if string.find(txt, "harv") or string.find(txt, "hái") then
+                        fireproximityprompt(v)
+                    end
                 end
             end
 
+            -- ===============================================================
+            -- CHẾ ĐỘ BAN ĐÊM (2 PHÚT TỐI): THỦ VƯỜN CANH TRỘM + TỰ TRỒNG SPEED
+            -- ===============================================================
             if isNight then
-                ---------------------------------------------------------------
-                -- CHẾ ĐỘ 2 PHÚT TỐI: THỦ VƯỜN CANH TRỘM - TUYỆT ĐỐI KHÔNG BÁN
-                ---------------------------------------------------------------
                 local center = GetGardenCenter()
-                if center then hrp.CFrame = CFrame.new(center + Vector3.new(0, 5, 0)) end
+                if center then hrp.CFrame = CFrame.new(center) end
                 
-                -- Đêm vẫn tranh thủ trồng nếu còn hạt trong túi
-                for _, v in pairs(Workspace:GetChildren()) do
-                    local p = v:IsA("ProximityPrompt") and v or v:FindFirstChildWhichIsA("ProximityPrompt")
-                    if p and string.find(string.lower(p.ActionText), "plant") then
-                        fireproximityprompt(p)
+                -- Tự động móc Speed hoặc Hạt giống trong kho ra gieo xuống đất
+                for _, v in pairs(Workspace:GetDescendants()) do
+                    if v:IsA("ProximityPrompt") then
+                        local txt = string.lower(v.ActionText .. v.ObjectText .. v.Name)
+                        -- Ưu tiên nhận diện các ô đất trống ("dirt", "plant", "trồng") để gieo hạt giống xịn/speed đang có sẵn
+                        if string.find(txt, "plant") or string.find(txt, "trồng") or string.find(txt, "dirt") then
+                            fireproximityprompt(v)
+                        end
                     end
                 end
+            
+            -- ===============================================================
+            -- CHẾ ĐỘ BAN NGÀY (7 PHÚT SÁNG): TỰ TRỒNG + 10 GIÂY TELE BÁN & MUA
+            -- ===============================================================
             else
-                ---------------------------------------------------------------
-                -- CHẾ ĐỘ 7 PHÚT SÁNG & 30S BÌNH MINH: AUTO FARM & TELE BÁN
-                ---------------------------------------------------------------
-                -- Trồng cây ban ngày
-                for _, v in pairs(Workspace:GetChildren()) do
-                    local p = v:IsA("ProximityPrompt") and v or v:FindFirstChildWhichIsA("ProximityPrompt")
-                    if p and string.find(string.lower(p.ActionText), "plant") then fireproximityprompt(p) end
+                -- Ban ngày vẫn gieo sạch hạt và Speed trong kho
+                for _, v in pairs(Workspace:GetDescendants()) do
+                    if v:IsA("ProximityPrompt") then
+                        local txt = string.lower(v.ActionText .. v.ObjectText .. v.Name)
+                        if string.find(txt, "plant") or string.find(txt, "trồng") or string.find(txt, "dirt") then
+                            fireproximityprompt(v)
+                        end
+                    end
                 end
 
-                -- Đếm ngược đúng 10 giây để đi bán và mua speed
+                -- Cứ đúng 10 giây đi chợ 1 lần
                 if tick() - lastActionTick >= 10 then
                     
-                    -- Đi bán đồ
+                    -- 1. Đi bán nông sản
                     local sellPrompt = FindShopPrompt({"sell", "bán"})
                     if sellPrompt and sellPrompt.Parent:IsA("BasePart") then
                         hrp.CFrame = CFrame.new(sellPrompt.Parent.Position + Vector3.new(0, 2, 0))
@@ -108,7 +123,7 @@ task.spawn(function()
                         task.wait(0.3)
                     end
 
-                    -- Đi mua hạt và mua Speed từ dưới lên
+                    -- 2. Đi mua gói hạt giống và Speed mới từ dưới lên
                     local speedPrompt = FindShopPrompt({"speed", "shop", "seed", "buy", "mua"})
                     if speedPrompt and speedPrompt.Parent:IsA("BasePart") then
                         hrp.CFrame = CFrame.new(speedPrompt.Parent.Position + Vector3.new(0, 2, 0))
@@ -117,9 +132,9 @@ task.spawn(function()
                         task.wait(0.3)
                     end
 
-                    -- Bán xong bay ngay về vườn thủ tiếp
+                    -- 3. Mua xong lập tức Tele về vườn để trồng tiếp hạt vừa mua
                     local center = GetGardenCenter()
-                    if center then hrp.CFrame = CFrame.new(center + Vector3.new(0, 5, 0)) end
+                    if center then hrp.CFrame = CFrame.new(center) end
                     
                     lastActionTick = tick()
                 end
