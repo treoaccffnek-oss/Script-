@@ -1,0 +1,2 @@
+# Script-
+Wed cày thuê
