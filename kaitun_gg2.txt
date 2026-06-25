@@ -1,38 +1,33 @@
 -- =========================================================================
--- SCRIPT: HYDRADAT FIX LỖI ĐỊNH VỊ + PHÓNG TO CHỮ BIG FONT (GROW A GARDEN 2)
--- CHỨC NĂNG: CHẠY LUÔN - WATERMARK TO ĐẸP - CHỈ TƯƠNG TÁC ĐÚNG MỤC TIÊU
+-- SCRIPT: HYDRADAT CODES BASED ON INTERFACE (GROW A GARDEN 2)
+-- CHỨC NĂNG: TỰ CLICK NÚT SCREEN GUI - FIX LỖI ĐỨNG IM 100%
 -- =========================================================================
 
 local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
-local player = game.Players.LocalPlayer
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local PlayerGui = player:WaitForChild("PlayerGui")
 
 if CoreGui:FindFirstChild("HydraDat_Watermark") then CoreGui.HydraDat_Watermark:Destroy() end
 
 -------------------------------------------------------------------
--- 1. WATERMARK TIKTOK: HYDRADAT (PHÓNG TO & ĐỔI KIỂU CHỮ)
+-- 1. WATERMARK TIKTOK: HYDRADAT (FONT ĐẸP CHÍNH GIỮA)
 -------------------------------------------------------------------
 local WatermarkGui = Instance.new("ScreenGui", CoreGui)
 WatermarkGui.Name = "HydraDat_Watermark"
 
 local WatermarkLabel = Instance.new("TextLabel", WatermarkGui)
--- Tăng kích thước khung chứa chữ để không bị xuống dòng
 WatermarkLabel.Size = UDim2.new(0, 600, 0, 70)
--- Giữ nguyên vị trí chính giữa màn hình (nhích lên một chút)
 WatermarkLabel.Position = UDim2.new(0.5, -300, 0.35, -35)
 WatermarkLabel.BackgroundTransparency = 1
-
--- Thay đổi nội dung chữ sang kiểu đặc biệt của bạn
 WatermarkLabel.Text = "ＴＩＫＴＯＫ:ＨＹＤＲＡＤＡＴ"
--- Phóng to kích cỡ chữ từ 28 lên 34 cực kỳ nổi bật
 WatermarkLabel.TextSize = 34 
-
 WatermarkLabel.Font = Enum.Font.GothamBold
-WatermarkLabel.TextStrokeTransparency = 0.15 -- Làm bóng đổ đậm nét hơn
+WatermarkLabel.TextStrokeTransparency = 0.15
 WatermarkLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
 
--- Vòng lặp đổi màu RGB mượt mà cho Watermark
 task.spawn(function()
     while true do
         for hue = 0, 1, 0.004 do
@@ -43,76 +38,81 @@ task.spawn(function()
 end)
 
 -------------------------------------------------------------------
--- 2. HÀM TƯƠNG TÁC AN TOÀN (CHỈ BẤM KHI ĐỨNG SÁT)
+-- 2. HÀM TỰ ĐỘNG CLICK NÚT TRÊN GIAO DIỆN GAME (GUI)
 -------------------------------------------------------------------
-local function TeleportAndInteract(targetPart)
-    local char = player.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if not hrp or not targetPart then return end
-
-    -- Dí thẳng nhân vật lên trên đầu vật thể 2 ô (tránh kẹt đất)
-    hrp.CFrame = targetPart.CFrame * CFrame.new(0, 2, 0)
-    task.wait(0.2)
-
-    -- Tìm nút bấm E bên trong vật thể đó
-    local prompt = targetPart:FindFirstChildOfClass("ProximityPrompt") or targetPart.Parent:FindFirstChildOfClass("ProximityPrompt")
-    if prompt then
-        fireproximityprompt(prompt)
-        task.wait(0.1)
-    end
+local function ClickGameButton(buttonName)
+    pcall(function()
+        -- Quét toàn bộ giao diện màn hình để tìm nút bấm theo tên (Seeds, Garden, Sell)
+        for _, gui in pairs(PlayerGui:GetDescendants()) do
+            if gui:IsA("TextButton") or gui:IsA("ImageButton") then
+                if string.find(string.lower(gui.Name), string.lower(buttonName)) or (gui:IsA("TextButton") and string.find(string.lower(gui.Text), string.lower(buttonName))) then
+                    -- Mô phỏng hành động click chuột vào nút
+                    gui:Activate()
+                    for _, connection in pairs(getconnections(gui.MouseButton1Click)) do connection:Fire() end
+                    for _, connection in pairs(getconnections(gui.MouseButton1Down)) do connection:Fire() end
+                    break
+                end
+            end
+        end
+    end)
 end
 
 -------------------------------------------------------------------
--- 3. VÒNG LẶP AUTO FARM CHUẨN ĐÍCH
+-- 3. VÒNG LẶP AUTO THU HOẠCH, BÁN, MUA SEEDS & TRỒNG TỰ ĐỘNG
 -------------------------------------------------------------------
 task.spawn(function()
     while true do
         pcall(function()
-            -- BƯỚC 1: QUÉT TOÀN BỘ MAP TÌM CÁC Ô ĐẤT CÓ THỂ THU HOẠCH
-            local dynamicPlots = {}
+            -- BƯỚC 1: Tự bấm nút "Garden" trên màn hình để về vườn
+            ClickGameButton("Garden")
+            task.wait(0.5)
+
+            -- BƯỚC 2: Tự động nhặt quả chín (Nút 'Harvest' hiện lên ở cây như trong ảnh 1000049845.jpg)
             for _, v in pairs(Workspace:GetDescendants()) do
-                if string.find(string.lower(v.Name), "plot") or v:FindFirstChild("IsRipe") then
-                    table.insert(dynamicPlots, v)
-                end
-            end
-
-            -- Đi đến từng ô đất để hái trái
-            local hasFruits = false
-            for _, plot in pairs(dynamicPlots) do
-                TeleportAndInteract(plot)
-                hasFruits = true 
-            end
-
-            -- BƯỚC 2: TÌM NPC BÁN NÔNG SẢN VÀ LAO ĐẾN BẤM
-            if hasFruits then
-                for _, v in pairs(Workspace:GetDescendants()) do
-                    if string.find(string.lower(v.Name), "sell") or string.find(string.lower(v.Name), "ban") then
-                        if v:IsA("BasePart") or v:IsA("MeshPart") then
-                            TeleportAndInteract(v)
-                            task.wait(0.5)
-                            break
-                        end
+                if v:IsA("ProximityPrompt") and (string.find(string.lower(v.ObjectText), "harvest") or string.find(string.lower(v.ActionText), "harvest")) then
+                    local char = player.Character
+                    if char and char:FindFirstChild("HumanoidRootPart") and v.Parent:IsA("BasePart") then
+                        char.HumanoidRootPart.CFrame = v.Parent.CFrame * CFrame.new(0, 2, 0)
+                        task.wait(0.1)
+                        fireproximityprompt(v)
                     end
                 end
             end
+            task.wait(0.5)
 
-            -- BƯỚC 3: TÌM NPC MUA HẠT GIỐNG VÀ LAO ĐẾN BẤM
+            -- BƯỚC 3: Tự động bấm nút "Sell" trên màn hình để bán sạch nông sản lấy tiền
+            ClickGameButton("Sell")
+            task.wait(0.5)
+
+            -- BƯỚC 4: Tự động bấm nút "Seeds" trên màn hình để mở shop mua hạt giống
+            ClickGameButton("Seeds")
+            task.wait(0.5)
+            
+            -- Tự động click mua tất cả các loại hạt giống/speed có trong Menu Seeds vừa hiện ra
+            for _, gui in pairs(PlayerGui:GetDescendants()) do
+                if gui:IsA("TextButton") and (string.find(string.lower(gui.Text), "buy") or string.find(string.lower(gui.Name), "buy")) then
+                    gui:Activate()
+                    for _, connection in pairs(getconnections(gui.MouseButton1Click)) do connection:Fire() end
+                end
+            end
+            task.wait(0.5)
+
+            -- BƯỚC 5: Bấm "Garden" quay về vườn đứng trồng tự động
+            ClickGameButton("Garden")
+            task.wait(0.5)
+
+            -- Quét các ô đất trống để tự động trồng hạt giống xuống
             for _, v in pairs(Workspace:GetDescendants()) do
-                if string.find(string.lower(v.Name), "shop") or string.find(string.lower(v.Name), "seed") or string.find(string.lower(v.Name), "mua") then
-                    if v:IsA("BasePart") or v:IsA("MeshPart") then
-                        TeleportAndInteract(v)
-                        task.wait(0.5)
-                        break
+                if v:IsA("ProximityPrompt") and (string.find(string.lower(v.ObjectText), "plant") or string.find(string.lower(v.ActionText), "plant") or string.find(string.lower(v.ObjectText), "dirt")) then
+                    local char = player.Character
+                    if char and char:FindFirstChild("HumanoidRootPart") and v.Parent:IsA("BasePart") then
+                        char.HumanoidRootPart.CFrame = v.Parent.CFrame * CFrame.new(0, 2, 0)
+                        task.wait(0.1)
+                        fireproximityprompt(v)
                     end
                 end
             end
-
-            -- BƯỚC 4: QUAY LẠI CÁC Ô ĐẤT ĐỂ TRỒNG LẠI
-            for _, plot in pairs(dynamicPlots) do
-                TeleportAndInteract(plot)
-            end
-
         end)
-        task.wait(2) -- Nghỉ 2 giây trước khi làm vòng mới
+        task.wait(1.5) -- Chu kỳ lập lại chuỗi hành động liên hoàn
     end
 end)
