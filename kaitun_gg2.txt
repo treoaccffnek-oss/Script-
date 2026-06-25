@@ -1,19 +1,20 @@
 -- =========================================================================
--- SCRIPT: HYDRADAT ULTIMATE KAITUN REMOTE (GROW A GARDEN 2)
--- UPGRADE: HIỆU ỨNG CHỮ CẦU VỒNG CHẠY TỪ TRÁI SANG PHẢI (RAINBOW GRADIENT)
+-- SCRIPT: HYDRADAT NIGHT GUARD + ANTI-AFK BYPASS (GROW A GARDEN 2)
+-- CHỨC NĂNG: HÁI SIÊU TỐC - THỦ VƯỜN ĐÊM - 10 PHÚT TỰ NHẢY & XOAY CAMERA CHỐNG AFK
 -- =========================================================================
 
 local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
 local player = Players.LocalPlayer
 local PlayerGui = player:WaitForChild("PlayerGui")
 
 if CoreGui:FindFirstChild("HydraDat_Watermark") then CoreGui.HydraDat_Watermark:Destroy() end
 
 -------------------------------------------------------------------
--- 1. WATERMARK ＴＩＫＴＯＫ:ＨＹＤＲＡＤＡＴ (HIỆU ỨNG CẦU VỒNG CHẠY TỪ TRÁI SANG PHẢI)
+-- 1. WATERMARK CẦU VỒNG CHẠY TỪ TRÁI SANG PHẢI
 -------------------------------------------------------------------
 local WatermarkGui = Instance.new("ScreenGui", CoreGui)
 WatermarkGui.Name = "HydraDat_Watermark"
@@ -27,116 +28,194 @@ WatermarkLabel.TextSize = 34
 WatermarkLabel.Font = Enum.Font.GothamBold
 WatermarkLabel.TextStrokeTransparency = 0.15
 WatermarkLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-WatermarkLabel.TextColor3 = Color3.fromRGB(255, 255, 255) -- Để màu trắng gốc để Gradient đè lên chuẩn nhất
+WatermarkLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 
--- Tạo dải màu Gradient Cầu Vồng
 local UiGradient = Instance.new("UIGradient", WatermarkLabel)
 UiGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),     -- Đỏ
-    ColorSequenceKeypoint.new(0.2, Color3.fromRGB(255, 127, 0)), -- Cam
-    ColorSequenceKeypoint.new(0.4, Color3.fromRGB(255, 255, 0)), -- Vàng
-    ColorSequenceKeypoint.new(0.6, Color3.fromRGB(0, 255, 0)),   -- Lục
-    ColorSequenceKeypoint.new(0.8, Color3.fromRGB(0, 0, 255)),   -- Lam
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(139, 0, 255))    -- Tím
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+    ColorSequenceKeypoint.new(0.2, Color3.fromRGB(255, 127, 0)),
+    ColorSequenceKeypoint.new(0.4, Color3.fromRGB(255, 255, 0)),
+    ColorSequenceKeypoint.new(0.6, Color3.fromRGB(0, 255, 0)),
+    ColorSequenceKeypoint.new(0.8, Color3.fromRGB(0, 0, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(139, 0, 255))
 })
 
--- Vòng lặp dịch chuyển dải màu từ trái sang phải liên tục
 task.spawn(function()
     local offset = 0
     while true do
-        -- Thay đổi vị trí Offset để tạo hiệu ứng màu chạy cuộn qua chữ
         UiGradient.Offset = Vector2.new(offset, 0)
-        offset = offset - 0.02 -- Tốc độ chạy của màu (chỉnh nhỏ lại nếu muốn chạy chậm hơn)
-        if offset <= -1 then
-            offset = 0
-        end
+        offset = offset - 0.02
+        if offset <= -1 then offset = 0 end
         RunService.RenderStepped:Wait()
     end
 end)
 
 -------------------------------------------------------------------
--- 2. HÀM CLICK GIAO DIỆN (GUI BUTTON)
+-- 2. HÀM HỖ TRỢ GIẢ LẬP CLICK TOẠ ĐỘ & ĐỊNH VỊ VƯỜN
 -------------------------------------------------------------------
-local function ClickGameButton(buttonName)
+local function ClickByRelativePosition(xScale, yScale)
     pcall(function()
-        for _, gui in pairs(PlayerGui:GetDescendants()) do
-            if gui:IsA("TextButton") or gui:IsA("ImageButton") then
-                if string.find(string.lower(gui.Name), string.lower(buttonName)) or (gui:IsA("TextButton") and string.find(string.lower(gui.Text), string.lower(buttonName))) then
-                    gui:Activate()
-                    for _, connection in pairs(getconnections(gui.MouseButton1Click)) do connection:Fire() end
-                    for _, connection in pairs(getconnections(gui.MouseButton1Down)) do connection:Fire() end
-                end
-            end
+        local camera = Workspace.CurrentCamera
+        local screenSize = camera.ViewportSize
+        local targetX = screenSize.X * xScale
+        local targetY = screenSize.Y * yScale
+        if game:GetService("VirtualUser") then
+            game:GetService("VirtualUser"):Button1Down(Vector2.new(targetX, targetY))
+            task.wait(0.05)
+            game:GetService("VirtualUser"):Button1Up(Vector2.new(targetX, targetY))
         end
     end)
 end
 
+local function GetGardenCenter()
+    local totalX, totalY, totalZ, count = 0, 0, 0, 0
+    for _, v in pairs(Workspace:GetDescendants()) do
+        if string.find(string.lower(v.Name), "plot") and v:IsA("BasePart") then
+            totalX = totalX + v.Position.X
+            totalY = totalY + v.Position.Y
+            totalZ = totalZ + v.Position.Z
+            count = count + 1
+        end
+    end
+    if count > 0 then
+        return Vector3.new(totalX / count, (totalY / count) + 3, totalZ / count)
+    end
+    return nil
+end
+
 -------------------------------------------------------------------
--- 3. VÒNG LẶP KAITUN TỪ XA - KHÔNG CẦN TELEPORT
+-- 3. MODULE CHỐNG AFK ĐỘC LẬP: CỨ 10 PHÚT NHẢY & XOAY CAMERA
+-------------------------------------------------------------------
+task.spawn(function()
+    pcall(function()
+        player.Idled:Connect(function()
+            game:GetService("VirtualUser"):Button2Down(Vector2.new(0,0), Workspace.CurrentCamera.CFrame)
+            task.wait(1)
+            game:GetService("VirtualUser"):Button2Up(Vector2.new(0,0), Workspace.CurrentCamera.CFrame)
+        end)
+    end)
+
+    while true do
+        task.wait(600) -- Đợi đúng 10 phút (600 giây)
+        pcall(function()
+            local char = player.Character
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            
+            -- 1. Ép nhân vật nhảy lên
+            if hum then
+                hum.Jump = true
+            end
+            task.wait(0.5)
+
+            -- 2. Xoay Camera màn hình một góc nhỏ tránh AFK
+            local camera = Workspace.CurrentCamera
+            if camera then
+                camera.CFrame = camera.CFrame * CFrame.Angles(0, math.rad(15), 0)
+            end
+        end)
+    end
+end)
+
+-------------------------------------------------------------------
+-- 4. VÒNG LẶP CHÍNH: CANH VƯỜN BAN ĐÊM & AUTO FARM BAN SÁNG
 -------------------------------------------------------------------
 task.spawn(function()
     while true do
         pcall(function()
-            
-            -- BƯỚC 1: HÁI TRÁI CÂY TỪ XA
-            for _, v in pairs(Workspace:GetDescendants()) do
-                if v:IsA("ProximityPrompt") then
-                    local actionText = string.lower(v.ActionText)
-                    local objectText = string.lower(v.ObjectText)
-                    
-                    if string.find(actionText, "harvest") or string.find(objectText, "harvest") or string.find(actionText, "hái") then
-                        fireproximityprompt(v)
+            local char = player.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if not hrp then return end
+
+            local isNight = Lighting.ClockTime < 6 or Lighting.ClockTime > 18
+
+            if isNight then
+                ---------------------------------------------------------------
+                -- CHẾ ĐỘ BAN ĐÊM: ĐỨNG IM THỦ VƯỜN - CHỐNG TRỘM
+                ---------------------------------------------------------------
+                local center = GetGardenCenter()
+                if center then
+                    hrp.CFrame = CFrame.new(center)
+                end
+
+                -- Hái từ xa ban đêm siêu tốc
+                for _, v in pairs(Workspace:GetDescendants()) do
+                    if v:IsA("ProximityPrompt") then
+                        local actionText = string.lower(v.ActionText)
+                        local objectText = string.lower(v.ObjectText)
+                        if string.find(actionText, "harvest") or string.find(objectText, "harvest") or string.find(actionText, "hái") then
+                            fireproximityprompt(v)
+                        end
                     end
                 end
-            end
-            task.wait(0.2)
-
-            -- BƯỚC 2: BÁN ĐỒ TỪ XA LIÊN TỤC
-            ClickGameButton("Sell")
-            task.wait(0.2)
-
-            -- BƯỚC 3: TỰ ĐỘNG MUA HẠT GIỐNG VÀ CÁC NÂNG CẤP (SPEED/UPGRADE)
-            ClickGameButton("Seeds")
-            task.wait(0.2)
-            
-            for _, gui in pairs(PlayerGui:GetDescendants()) do
-                if gui:IsA("TextButton") and (string.find(string.lower(gui.Text), "buy") or string.find(string.lower(gui.Name), "buy") or string.find(string.lower(gui.Text), "mua")) then
-                    gui:Activate()
-                    for _, connection in pairs(getconnections(gui.MouseButton1Click)) do connection:Fire() end
+                
+                -- Trồng tại chỗ ban đêm nếu có sẵn hạt
+                for _, v in pairs(Workspace:GetDescendants()) do
+                    if v:IsA("ProximityPrompt") then
+                        local actionText = string.lower(v.ActionText)
+                        local objectText = string.lower(v.ObjectText)
+                        if string.find(actionText, "plant") or string.find(objectText, "plant") or string.find(actionText, "trồng") then
+                            fireproximityprompt(v)
+                        end
+                    end
                 end
-            end
-            task.wait(0.2)
 
-            -- BƯỚC 4: TỰ ĐỘNG MUA THÊM KHU TRỒNG (UNLOCK PLOTS MỚI)
-            for _, gui in pairs(PlayerGui:GetDescendants()) do
-                if gui:IsA("TextButton") and (string.find(string.lower(gui.Text), "plot") or string.find(string.lower(gui.Name), "plot") or string.find(string.lower(gui.Text), "khu")) then
-                    if string.find(string.lower(gui.Text), "buy") or string.find(string.lower(gui.Text), "unlock") or string.find(string.lower(gui.Text), "mở") then
+            else
+                ---------------------------------------------------------------
+                -- CHẾ ĐỘ BAN SÁNG: KÍCH HOẠT FULL CHU TRÌNH KAITUN
+                ---------------------------------------------------------------
+                -- Hái quả sáng
+                for _, v in pairs(Workspace:GetDescendants()) do
+                    if v:IsA("ProximityPrompt") then
+                        local actionText = string.lower(v.ActionText)
+                        local objectText = string.lower(v.ObjectText)
+                        if string.find(actionText, "harvest") or string.find(objectText, "harvest") or string.find(actionText, "hái") then
+                            fireproximityprompt(v)
+                        end
+                    end
+                end
+
+                -- Bán nông sản
+                ClickByRelativePosition(0.67, 0.18)
+                task.wait(0.2)
+
+                -- Mở mục Seeds để mua hạt giống và nâng cấp speed
+                ClickByRelativePosition(0.35, 0.18)
+                task.wait(0.3)
+                
+                for _, gui in pairs(PlayerGui:GetDescendants()) do
+                    if gui:IsA("TextButton") and (string.find(string.lower(gui.Text), "buy") or string.find(string.lower(gui.Text), "mua") or string.find(string.lower(gui.Name), "buy")) then
                         gui:Activate()
-                        for _, connection in pairs(getconnections(gui.MouseButton1Click)) do connection:Fire() end
                     end
                 end
-            end
-            
-            for _, v in pairs(Workspace:GetDescendants()) do
-                if v:IsA("ProximityPrompt") and (string.find(string.lower(v.ObjectText), "buy") or string.find(string.lower(v.ObjectText), "plot") or string.find(string.lower(v.ActionText), "buy")) then
-                    fireproximityprompt(v)
-                end
-            end
-            task.wait(0.2)
+                task.wait(0.2)
 
-            -- BƯỚC 5: TỰ ĐỘNG GIEO HẾT SẠCH HẠT GIỐNG TỪ XA
-            for _, v in pairs(Workspace:GetDescendants()) do
-                if v:IsA("ProximityPrompt") then
-                    local actionText = string.lower(v.ActionText)
-                    local objectText = string.lower(v.ObjectText)
-                    
-                    if string.find(actionText, "plant") or string.find(objectText, "plant") or string.find(objectText, "dirt") or string.find(actionText, "trồng") then
+                -- Tự động mua thêm khu trồng mới khi đủ tiền
+                for _, gui in pairs(PlayerGui:GetDescendants()) do
+                    if gui:IsA("TextButton") and (string.find(string.lower(gui.Text), "plot") or string.find(string.lower(gui.Text), "khu")) then
+                        if string.find(string.lower(gui.Text), "buy") or string.find(string.lower(gui.Text), "unlock") then
+                            gui:Activate()
+                        end
+                    end
+                end
+                for _, v in pairs(Workspace:GetDescendants()) do
+                    if v:IsA("ProximityPrompt") and (string.find(string.lower(v.ObjectText), "buy") or string.find(string.lower(v.ObjectText), "plot")) then
                         fireproximityprompt(v)
+                    end
+                end
+
+                -- Trồng lại hạt giống mới
+                for _, v in pairs(Workspace:GetDescendants()) do
+                    if v:IsA("ProximityPrompt") then
+                        local actionText = string.lower(v.ActionText)
+                        local objectText = string.lower(v.ObjectText)
+                        if string.find(actionText, "plant") or string.find(objectText, "plant") or string.find(objectText, "dirt") or string.find(actionText, "trồng") then
+                            fireproximityprompt(v)
+                        end
                     end
                 end
             end
 
         end)
-        task.wait(0.8)
+        task.wait(0.3)
     end
 end)
