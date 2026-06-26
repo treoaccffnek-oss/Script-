@@ -1,7 +1,7 @@
 -- =========================================================================
--- SCRIPT: HYDRADAT FAST-TWEEN SYSTEM - GROW A GARDEN 2
--- CƠ CHẾ: LƯỚT SIÊU TỐC ĐẾN BỤC ĐỂ ÉP BÁN/MUA -> VỀ VƯỜN (FIX 100% TRƠ LỆNH)
--- ĐỒ HỌA: CHỮ CẦU VỒNG LOANG MƯỢT GIỮA MÀN HÌNH - TOÀN BỘ SERVER MÀU XÁM KHỬ LAG
+-- SCRIPT: HYDRADAT CORE INJECTION SYSTEM - GROW A GARDEN 2
+-- CƠ CHẾ: ÉP LỆNH KÍCH HOẠT PROXIMITY GỐC TOÀN MAP - KHÔNG CẦN TELE/DỊCH CHUYỂN
+-- ĐỒ HỌA: CHỮ CẦU VỒNG CHÍNH GIỮA - TOÀN SERVER (MAP + SKIN) MÀU XÁM GIẢM LAG
 -- =========================================================================
 
 -- 1. DỌN SẠCH CÁC LOẠI CHỮ CŨ
@@ -13,12 +13,10 @@ local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local VirtualUser = game:GetService("VirtualUser")
-local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 
 local lastAction = tick()
 local lastJump = tick()
-local myGardenPos = nil -- Tự động ghi nhớ vị trí vườn nhà bạn
 
 -------------------------------------------------------------------
 -- 2. TẠO TEXT CHỮ CẦU VỒNG LOANG DẦN MƯỢT MÀ GIỮA MÀN HÌNH
@@ -101,115 +99,71 @@ pcall(function()
     end)
 end)
 
--- HÀM LƯỚT NHÂN VẬT MƯỢT MÀ KHÔNG BỊ PHÁT HIỆN
-local function TeleportTween(hrp, targetCFrame)
-    local distance = (hrp.Position - targetCFrame.Position).Magnitude
-    local speed = 150 -- Tốc độ lướt an toàn
-    local info = TweenInfo.new(distance / speed, Enum.EasingStyle.Linear)
-    local tween = TweenService:Create(hrp, info, {CFrame = targetCFrame})
-    tween:Play()
-    tween.Completed:Wait()
-end
-
 -------------------------------------------------------------------
--- 5. VÒNG LẶP ÉP BUỘC DI CHUYỂN VÀ XỬ LÝ GIAO DỊCH
+-- 5. VÒNG LẶP ÉP LỆNH CHẠY LIÊN TỤC
 -------------------------------------------------------------------
 task.spawn(function()
     while true do
-        task.wait(0.5)
+        task.wait(0.4) -- Đẩy nhanh tiến độ vòng lặp
         
         local char = player.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         local hum = char and char:FindFirstChildOfClass("Humanoid")
         
         if hrp and hum then
-            -- Ghi nhớ vị trí vườn lúc bắt đầu chạy
-            if not myGardenPos then
-                myGardenPos = hrp.CFrame
-            end
-
             pcall(function()
-                -- LỆNH NHẢY TỰ ĐỘNG
+                -- TỰ ĐỘNG NHẢY
                 if tick() - lastJump >= 10 then
                     hum.Jump = true
                     lastJump = tick()
-                    task.wait(0.3)
                 end
 
                 local isNightOrRainbow = (Lighting.OutdoorAmbient.R < 60) or (Lighting.ClockTime >= 18 or Lighting.ClockTime <= 6)
                 local allParts = Workspace:GetDescendants()
 
-                -- CẤU HÌNH PROXIMITY
+                -- PHÁ BỎ MỌI GIỚI HẠN KHOẢNG CÁCH VÀ THỜI GIAN GIỮ NÚT CỦA GAME
                 for i = 1, #allParts do
                     local v = allParts[i]
                     if v:IsA("ProximityPrompt") then
                         v.HoldDuration = 0
+                        v.MaxActivationDistance = 500 -- Mở rộng tầm nhận diện cực đại
                         v.RequiresLineOfSight = false
                     end
                 end
 
-                -- CHU KỲ LƯỚT ĐI BÁN VÀ MUA (CỨ MỖI 10 GIÂY THỰC HIỆN 1 LẦN)
+                -- ========================================================
+                -- CHU KỲ BÁN VÀ MUA TẠI CHỖ (CỨ MỖI 6 GIÂY ÉP LỆNH GIAO DỊCH 1 LẦN)
+                -- ========================================================
                 if not isNightOrRainbow then
-                    if tick() - lastAction >= 10 then
-                        
-                        -- BƯỚC 1: Lướt thẳng tới bục Bán (Sell)
+                    if tick() - lastAction >= 6 then
                         for i = 1, #allParts do
                             local v = allParts[i]
-                            if v:IsA("ProximityPrompt") and (string.find(string.lower(v.ActionText), "sell") or string.find(string.lower(v.Name), "sell")) then
-                                TeleportTween(hrp, v.Parent.CFrame + Vector3.new(0, 3, 0))
-                                task.wait(0.3)
-                                fireproximityprompt(v)
-                                task.wait(0.5)
-                                break
+                            if v:IsA("ProximityPrompt") then
+                                local name = string.lower(v.Name .. v.ActionText .. v.ObjectText)
+                                -- Ép kích hoạt đồng loạt bất kể nút nào chứa từ khóa bán/mua/shop/speed/hạt
+                                if string.find(name, "sell") or string.find(name, "bán") or string.find(name, "shop") or string.find(name, "speed") or string.find(name, "buy") or string.find(name, "seed") then
+                                    fireproximityprompt(v)
+                                end
                             end
                         end
-
-                        -- BƯỚC 2: Lướt thẳng tới bục Mua (Shop/Speed)
-                        for i = 1, #allParts do
-                            local v = allParts[i]
-                            if v:IsA("ProximityPrompt") and (string.find(string.lower(v.ActionText), "speed") or string.find(string.lower(v.Name), "shop") or string.find(string.lower(v.ActionText), "buy")) then
-                                TeleportTween(hrp, v.Parent.CFrame + Vector3.new(0, 3, 0))
-                                task.wait(0.3)
-                                fireproximityprompt(v)
-                                task.wait(0.5)
-                                break
-                            end
-                        end
-
-                        -- BƯỚC 3: Lướt an toàn quay trở về vị trí vườn nhà
-                        if myGardenPos then
-                            TeleportTween(hrp, myGardenPos)
-                        end
-                        
                         lastAction = tick()
                     end
                 end
 
-                -- TỰ ĐỘNG HÁI QUẢ VÀ NHẶT HẠT XUNG QUANH VƯỜN
+                -- ========================================================
+                -- TỰ ĐỘNG HÁI QUẢ VÀ TRỒNG CÂY TRÊN DIỆN RỘNG (TẦM QUÉT 200 STUDS)
+                -- ========================================================
                 for i = 1, #allParts do
                     local v = allParts[i]
                     if v:IsA("ProximityPrompt") then
-                        local txt = string.lower(v.ActionText .. v.ObjectText .. v.Name)
-                        if string.find(txt, "harv") or string.find(txt, "hái") or string.find(txt, "collect") or string.find(txt, "seed") or string.find(txt, "nhặt") then
-                            if not string.find(txt, "sell") and not string.find(txt, "shop") and not string.find(txt, "buy") then
-                                if (v.Parent.Position - hrp.Position).Magnitude < 35 then
-                                    fireproximityprompt(v)
-                                    task.wait(0.12)
-                                end
-                            end
-                        end
-                    end
-                end
-
-                -- TỰ ĐỘNG TRỒNG CÂY TẠI VƯỜN
-                for i = 1, #allParts do
-                    local v = allParts[i]
-                    if v:IsA("ProximityPrompt") then
-                        local txt = string.lower(v.ActionText .. v.ObjectText)
-                        if string.find(txt, "plant") or string.find(txt, "trồng") or string.find(txt, "dirt") then
-                            if (v.Parent.Position - hrp.Position).Magnitude < 35 then
+                        local name = string.lower(v.Name .. v.ActionText .. v.ObjectText)
+                        
+                        -- Lọc bỏ các nút bán/mua để tập trung trồng trọt
+                        if not string.find(name, "sell") and not string.find(name, "bán") and not string.find(name, "shop") and not string.find(name, "buy") then
+                            -- Quét bán kính 200 studs (bao trọn mảnh vườn của bạn)
+                            if (v.Parent.Position - hrp.Position).Magnitude < 200 then
                                 fireproximityprompt(v)
-                                task.wait(0.12)
+                                task.wait(0.05) -- Tốc độ gieo hạt hái quả thần tốc
                             end
                         end
                     end
