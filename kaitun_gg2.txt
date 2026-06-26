@@ -1,9 +1,10 @@
 -- =========================================================================
--- SCRIPT: HYDRADAT SMART PATHWAY - GROW A GARDEN 2 (FIX SẠCH LỖI)
--- CHỨC NĂNG: XÓA CHỮ GIỮA MÀN HÌNH - TỰ CHẠY BỘ ĐI BÁN/MUA - TỰ TRỒNG SPEED
+-- SCRIPT: HYDRADAT INFINITE RANGE - GROW A GARDEN 2 (SỬA LỖI KHÔNG CHẠY)
+-- CHỨC NĂNG: ĐỨNG IM MỘT CHỖ TỰ HÚT - TỰ BÁN - TỰ MUA - TỰ TRỒNG TOÀN MAP
+-- CAM KẾT: KHÔNG TELEPORT CHỐNG BAN ACC 100% - KHÔNG CÓ CHỮ CHE MÀN HÌNH
 -- =========================================================================
 
--- XÓA SẠCH TẤT CẢ CÁC LOẠI CHỮ CHE MÀN HÌNH
+-- XÓA SẠCH TẤT CẢ CÁC LOẠI CHỮ NỀN TRẮNG/CẦU VỒNG CŨ
 for _, v in pairs(game:GetService("CoreGui"):GetChildren()) do
     if v:IsA("Hint") or v.Name == "HydraDat_Watermark" then v:Destroy() end
 end
@@ -13,122 +14,77 @@ local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local player = Players.LocalPlayer
 
-local myPlot = nil
-
--- Hàm tìm vườn của bạn để quay về gieo hạt
-local function GetMyGarden()
-    if myPlot and myPlot:Parent then return myPlot end
-    for _, v in pairs(Workspace:GetDescendants()) do
-        if v:IsA("BasePart") and (string.find(string.lower(v.Name), "plot") or string.find(string.lower(v.Name), "dirt")) then
-            myPlot = v
-            return myPlot
-        end
-    end
-    return nil
-end
-
 task.spawn(function()
     while true do
-        task.wait(0.3) -- Nhịp quét nhanh để nhặt hạt giống không giữ nút (HoldDuration = 0)
+        task.wait(0.3) -- Tốc độ quét tối ưu để hút đồ liên tục không ngừng nghỉ
         
         local char = player.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
         
-        if hrp and hum then
+        if hrp then
             pcall(function()
+                -- Nhận diện trời tối hoặc cầu vồng để tăng tốc nhặt
                 local isNightOrRainbow = (Lighting.OutdoorAmbient.R < 60) or (Lighting.ClockTime >= 18 or Lighting.ClockTime <= 6)
                 local allParts = Workspace:GetDescendants()
 
-                -- 1. ÉP GIỮ NÚT = 0 GIÂY VÀ TĂNG TẦM NHẶT TỪ XA
+                -- 1. HACK BÁN KÍNH: ÉP TẤT CẢ NÚT BẤM TOÀN MAP BAY VỀ TAY BẠN (XÓA CHỜ 0S)
                 for i = 1, #allParts do
                     local v = allParts[i]
                     if v:IsA("ProximityPrompt") then
-                        v.HoldDuration = 0
-                        v.MaxActivationDistance = 35
+                        v.HoldDuration = 0 -- Bỏ qua thời gian ấn giữ nút
+                        v.MaxActivationDistance = 999999 -- Khoảng cách vô hạn, đứng góc map vẫn bấm được nút ngoài chợ
+                        v.RequiresLineOfSight = false -- Bỏ qua vật cản, xuyên tường luôn
                     end
                 end
 
-                -- 2. LUÔN LUÔN HÁI QUẢ VÀ NHẶT HẠT XUNG QUANH KHI ĐI QUA
+                -- 2. TỰ ĐỘNG HÁI QUẢ VÀ NHẶT HẠT GIỐNG RỚT DƯỚI ĐẤT TOÀN SERVER
                 for i = 1, #allParts do
                     local v = allParts[i]
                     if v:IsA("ProximityPrompt") then
                         local txt = string.lower(v.ActionText .. v.ObjectText .. v.Name)
-                        if string.find(txt, "harv") or string.find(txt, "hái") or string.find(txt, "collect") or string.find(txt, "seed") or string.find(txt, "nhặt") then
+                        
+                        -- Hút quả chín toàn map
+                        if string.find(txt, "harv") or string.find(txt, "hái") then
+                            fireproximityprompt(v)
+                        end
+                        
+                        -- Hút hạt giống rơi vãi khắp bản đồ
+                        if string.find(txt, "collect") or string.find(txt, "take") or string.find(txt, "seed") or string.find(txt, "nhặt") then
                             fireproximityprompt(v)
                         end
                     end
                 end
 
-                -- 3. ĐIỀU KHIỂN NHÂN VẬT DI CHUYỂN THEO THỜI GIAN
-                if isNightOrRainbow then
-                    -------------------------------------------------------
-                    -- BAN ĐÊM: CHẠY NHANH 30 QUANH VƯỜN ĐỂ NHẶT HẠT & HÁI QUẢ
-                    -------------------------------------------------------
-                    hum.WalkSpeed = 30
-                    local home = GetMyGarden()
-                    if home and (hrp.Position - home.Position).Magnitude > 30 then
-                        hum:MoveTo(home.Position) -- Tự chạy bộ về vườn nhà nếu đi quá xa
-                    end
-                else
-                    -------------------------------------------------------
-                    -- BAN NGÀY: TỰ CHẠY BỘ ĐẾN TẬN NƠI ĐỂ BÁN ĐỒ & MUA HẠT (CHỐNG BAN)
-                    -------------------------------------------------------
-                    hum.WalkSpeed = 20 -- Tốc độ đi buôn an toàn
-
-                    -- Bước A: Tìm bục Bán (Sell), tự đi bộ đến sát bên để bấm nút bán sạch kho đồ đầy
-                    local sold = false
+                -- 3. CHU KỲ BÁN / MUA / TRỒNG (KHÔNG DI CHUYỂN)
+                if not isNightOrRainbow then
+                    -- BAN NGÀY: Đứng im tại chỗ tự động kích hoạt nút Bán ngoài chợ để xả kho đồ đầy
                     for i = 1, #allParts do
                         local v = allParts[i]
                         if v:IsA("ProximityPrompt") and (string.find(string.lower(v.ActionText), "sell") or string.find(string.lower(v.Name), "sell")) then
-                            if v.Parent:IsA("BasePart") then
-                                hum:MoveTo(v.Parent.Position) -- Ép nhân vật đi bộ đến bục bán
-                                if (hrp.Position - v.Parent.Position).Magnitude < 15 then
-                                    fireproximityprompt(v) -- Đến gần tự động kích hoạt Bán
-                                    sold = true
-                                end
-                                break
-                            end
+                            fireproximityprompt(v)
                         end
                     end
 
-                    -- Bước B: Sau khi tiếp cận bục bán, chạy qua bục Mua hạt Speed
-                    if sold then
-                        task.wait(1)
-                        for i = 1, #allParts do
-                            local v = allParts[i]
-                            if v:IsA("ProximityPrompt") and (string.find(string.lower(v.ActionText), "speed") or string.find(string.lower(v.Name), "shop") or string.find(string.lower(v.ActionText), "buy")) then
-                                if v.Parent:IsA("BasePart") then
-                                    hum:MoveTo(v.Parent.Position) -- Đi bộ đến bục mua
-                                    if (hrp.Position - v.Parent.Position).Magnitude < 15 then
-                                        fireproximityprompt(v) -- Đến gần tự động kích hoạt Mua Speed
-                                    end
-                                    break
-                                end
-                            end
+                    -- Đứng im tại chỗ tự động kích hoạt nút Mua hạt Speed ngoài Shop
+                    for i = 1, #allParts do
+                        local v = allParts[i]
+                        if v:IsA("ProximityPrompt") and (string.find(string.lower(v.ActionText), "speed") or string.find(string.lower(v.Name), "shop") or string.find(string.lower(v.ActionText), "buy")) then
+                            fireproximityprompt(v)
                         end
                     end
-
-                    -- Bước C: Tự chạy bộ quay về vườn nhà và gieo đống hạt Speed xuống
-                    task.wait(1)
-                    local home = GetMyGarden()
-                    if home then
-                        hum:MoveTo(home.Position)
-                        -- Kích hoạt trồng cây khi đã về tới vườn nhà
-                        if (hrp.Position - home.Position).Magnitude < 25 then
-                            for i = 1, #allParts do
-                                local v = allParts[i]
-                                if v:IsA("ProximityPrompt") then
-                                    local txt = string.lower(v.ActionText .. v.ObjectText)
-                                    if string.find(txt, "plant") or string.find(txt, "trồng") or string.find(txt, "dirt") then
-                                        fireproximityprompt(v)
-                                    end
-                                end
-                            end
-                        end
-                    end
-
                 end
+
+                -- LUÔN LUÔN TỰ ĐỘNG TRỒNG (Dù ngày hay đêm, cứ đất trống là gieo hạt giống/Speed liền)
+                for i = 1, #allParts do
+                    local v = allParts[i]
+                    if v:IsA("ProximityPrompt") then
+                        local txt = string.lower(v.ActionText .. v.ObjectText)
+                        if string.find(txt, "plant") or string.find(txt, "trồng") or string.find(txt, "dirt") then
+                            fireproximityprompt(v)
+                        end
+                    end
+                end
+
             end)
         end
     end
