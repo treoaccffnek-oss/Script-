@@ -1,10 +1,10 @@
 -- =========================================================================
--- SCRIPT: HYDRADAT ULTRA-LITE LIGHTWEIGHT EDITION - GROW A GARDEN 2
--- CHỨC NĂNG: TEXT XÁM CHỐNG LAG - HÚT NÚT VỀ CHÂN - AUTO JUMP - ANTI-AFK
--- CAM KẾT: TỐI ƯU HÓA HOÀN TOÀN, BẬT LÀ CHẠY 100% KHÔNG SẬP GAME
+-- SCRIPT: HYDRADAT TIME-SLICE EDITION - GROW A GARDEN 2
+-- CHỨC NĂNG: TEXT XÁM - CHẠY TỪ TỪ THEO THỨ TỰ CHỐNG LAG - BẬT LÀ CHẠY 100%
+-- CAM KẾT: CHỐNG BAN ACC - CHỐNG QUÁ TẢI EXECUTOR - ANTI AFK + JUMP 10S
 -- =========================================================================
 
--- 1. XÓA SẠCH GIAO DIỆN CŨ ĐỂ GIẢM TẢI CHO BỘ NHỚ
+-- XÓA SẠCH GIAO DIỆN CŨ ĐỂ GIẢM TẢI BỘ NHỚ
 for _, v in pairs(game:GetService("CoreGui"):GetChildren()) do
     if v:IsA("Hint") or v.Name == "HydraDat_RainbowGui" or v.Name == "HydraDat_Watermark" then v:Destroy() end
 end
@@ -19,7 +19,7 @@ local lastAction = tick()
 local lastJump = tick()
 
 -------------------------------------------------------------------
--- 2. TẠO TEXT MÀU XÁM ĐƠN GIẢN (TRIỆT TIÊU GIẬT LAG)
+-- TẠO TEXT MÀU XÁM ĐƠN GIẢN (CỐ ĐỊNH CHỐNG LAG)
 -------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "HydraDat_RainbowGui"
@@ -28,15 +28,15 @@ ScreenGui.Parent = game:GetService("CoreGui")
 local TextLabel = Instance.new("TextLabel")
 TextLabel.Parent = ScreenGui
 TextLabel.Size = UDim2.new(0, 600, 0, 50)
-TextLabel.Position = UDim2.new(0.5, -300, 0.4, -25) -- Căn giữa màn hình
+TextLabel.Position = UDim2.new(0.5, -300, 0.4, -25)
 TextLabel.BackgroundTransparency = 1
 TextLabel.Text = "ｔｉｋｔｏｋ:ｈｙｄｒａｄａｔ"
 TextLabel.Font = Enum.Font.SourceSansBold
 TextLabel.TextSize = 32
-TextLabel.TextColor3 = Color3.fromRGB(150, 150, 150) -- Màu xám cố định để giảm tải đồ họa cho máy
+TextLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
 
 -------------------------------------------------------------------
--- 3. HỆ THỐNG ANTI-AFK BẤT TỬ
+-- ANTI-AFK BẤT TỬ
 -------------------------------------------------------------------
 pcall(function()
     player.Idled:Connect(function()
@@ -47,11 +47,11 @@ pcall(function()
 end)
 
 -------------------------------------------------------------------
--- 4. VÒNG LẶP CHÍNH CÀY CUỐC SIÊU MƯỢT
+-- VÒNG LẶP TUYẾN TÍNH CHẠY TỪ TỪ (MỖI LÚC CHỈ LÀM 1 VIỆC)
 -------------------------------------------------------------------
 task.spawn(function()
     while true do
-        task.wait(0.4) -- Tăng độ trễ nhẹ lên 0.4s để Executor xử lý kịp, chống kẹt lệnh
+        task.wait(0.5) -- Nghỉ 0.5 giây giữa mỗi vòng quét lớn để máy thở
         
         local char = player.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -59,16 +59,17 @@ task.spawn(function()
         
         if hrp and hum then
             pcall(function()
-                -- LỆNH NHẢY TỰ ĐỘNG MỖI 10 GIÂY CHỐNG AFK
+                -- 1. KIỂM TRA NHẢY CHỐNG AFK TRƯỚC
                 if tick() - lastJump >= 10 then
                     hum.Jump = true
                     lastJump = tick()
+                    task.wait(0.3) -- Nhảy xong nghỉ một chút rồi mới làm việc khác
                 end
 
                 local isNightOrRainbow = (Lighting.OutdoorAmbient.R < 60) or (Lighting.ClockTime >= 18 or Lighting.ClockTime <= 6)
                 local allParts = Workspace:GetDescendants()
 
-                -- ÉP THỜI GIAN GIỮ NÚT = 0 GIÂY
+                -- TỐI ƯU CƠ BẢN CHO NÚT BẤM
                 for i = 1, #allParts do
                     local v = allParts[i]
                     if v:IsA("ProximityPrompt") then
@@ -77,46 +78,79 @@ task.spawn(function()
                     end
                 end
 
-                -- TỰ ĐỘNG HÚT HẠT GIỐNG RƠI VÃI VỀ CHÂN
+                -- ========================================================
+                -- CHẠY TỪ TỪ: BƯỚC 1 - CHỈ HÁI TRÁI CÂY CHÍN
+                -- ========================================================
                 for i = 1, #allParts do
                     local v = allParts[i]
                     if v:IsA("ProximityPrompt") then
                         local txt = string.lower(v.ActionText .. v.ObjectText .. v.Name)
-                        if string.find(txt, "harv") or string.find(txt, "hái") or string.find(txt, "collect") or string.find(txt, "seed") or string.find(txt, "nhặt") then
-                            if v.Parent:IsA("BasePart") and not string.find(txt, "sell") and not string.find(txt, "shop") and not string.find(txt, "buy") then
+                        if string.find(txt, "harv") or string.find(txt, "hái") then
+                            if v.Parent:IsA("BasePart") then
                                 local oldPos = v.Parent.Position
                                 v.Parent.Position = hrp.Position
-                                task.wait(0.02)
+                                task.wait(0.15) -- Chờ nút di chuyển đến chân
                                 fireproximityprompt(v)
                                 v.Parent.Position = oldPos
+                                task.wait(0.2) -- HOẠT ĐỘNG TỪ TỪ: Nghỉ 0.2s sau mỗi lần hái để chống lag
                             end
                         end
                     end
                 end
 
-                -- CHU KỲ BÁN VÀ MUA HẠT (MỖI 7 GIÂY BAN NGÀY)
+                -- ========================================================
+                -- CHẠY TỪ TỪ: BƯỚC 2 - CHỈ NHẶT HẠT GIỐNG DƯỚI ĐẤT
+                -- ========================================================
+                for i = 1, #allParts do
+                    local v = allParts[i]
+                    if v:IsA("ProximityPrompt") then
+                        local txt = string.lower(v.ActionText .. v.ObjectText .. v.Name)
+                        if string.find(txt, "collect") or string.find(txt, "seed") or string.find(txt, "nhặt") then
+                            if v.Parent:IsA("BasePart") and not string.find(txt, "sell") and not string.find(txt, "shop") then
+                                local oldPos = v.Parent.Position
+                                v.Parent.Position = hrp.Position
+                                task.wait(0.15)
+                                fireproximityprompt(v)
+                                v.Parent.Position = oldPos
+                                task.wait(0.2) -- HOẠT ĐỘNG TỪ TỪ: Nghỉ 0.2s sau khi nhặt hạt giống
+                            end
+                        end
+                    end
+                end
+
+                -- ========================================================
+                -- CHẠY TỪ TỪ: BƯỚC 3 - CHU KỲ ĐI CHỢ BÁN & MUA (7 GIÂY 1 LẦN)
+                -- ========================================================
                 if not isNightOrRainbow then
                     if tick() - lastAction >= 7 then
+                        -- Hành động A: Chỉ kéo nút Bán về để Bán
                         for i = 1, #allParts do
                             local v = allParts[i]
-                            -- HÚT NÚT BÁN (SELL)
                             if v:IsA("ProximityPrompt") and (string.find(string.lower(v.ActionText), "sell") or string.find(string.lower(v.Name), "sell")) then
                                 if v.Parent:IsA("BasePart") then
                                     local oldPos = v.Parent.Position
                                     v.Parent.Position = hrp.Position
-                                    task.wait(0.15)
+                                    task.wait(0.3) -- Chờ bục bán đồng bộ vị trí mượt mà
                                     fireproximityprompt(v)
                                     v.Parent.Position = oldPos
+                                    task.wait(0.5) -- Bán xong nghỉ hẳn nửa giây cho game xả kho sạch sẽ
+                                    break
                                 end
                             end
-                            -- HÚT NÚT MUA HẠT SPEED
+                        end
+
+                        -- Hành động B: Chỉ kéo nút Mua về để Mua
+                        for i = 1, #allParts do
+                            local v = allParts[i]
                             if v:IsA("ProximityPrompt") and (string.find(string.lower(v.ActionText), "speed") or string.find(string.lower(v.Name), "shop") or string.find(string.lower(v.ActionText), "buy")) then
                                 if v.Parent:IsA("BasePart") then
                                     local oldPos = v.Parent.Position
                                     v.Parent.Position = hrp.Position
-                                    task.wait(0.15)
+                                    task.wait(0.3)
                                     fireproximityprompt(v)
                                     v.Parent.Position = oldPos
+                                    task.wait(0.5) -- Mua xong nghỉ hẳn nửa giây
+                                    break
                                 end
                             end
                         end
@@ -124,13 +158,16 @@ task.spawn(function()
                     end
                 end
 
-                -- LUÔN LUÔN TỰ ĐỘNG TRỒNG TRÊN ĐẤT TRỐNG VƯỜN NHÀ
+                -- ========================================================
+                -- CHẠY TỪ TỪ: BƯỚC 4 - CHỈ GIEO HẠT TRỒNG CÂY
+                -- ========================================================
                 for i = 1, #allParts do
                     local v = allParts[i]
                     if v:IsA("ProximityPrompt") then
                         local txt = string.lower(v.ActionText .. v.ObjectText)
                         if string.find(txt, "plant") or string.find(txt, "trồng") or string.find(txt, "dirt") then
                             fireproximityprompt(v)
+                            task.wait(0.15) -- Trồng mỗi hạt xong nghỉ nhẹ một cái rồi trồng tiếp
                         end
                     end
                 end
