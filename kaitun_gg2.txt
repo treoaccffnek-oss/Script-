@@ -1,91 +1,82 @@
 -- =========================================================================
--- SCRIPT: HYDRADAT INFINITE RANGE - GROW A GARDEN 2 (SỬA LỖI KHÔNG CHẠY)
--- CHỨC NĂNG: ĐỨNG IM MỘT CHỖ TỰ HÚT - TỰ BÁN - TỰ MUA - TỰ TRỒNG TOÀN MAP
--- CAM KẾT: KHÔNG TELEPORT CHỐNG BAN ACC 100% - KHÔNG CÓ CHỮ CHE MÀN HÌNH
+-- SCRIPT: HYDRADAT GRADIENT RAINBOW EDITION - GROW A GARDEN 2
+-- CHỨC NĂNG: TEXT CHUYỂN MÀU CẦU VỒNG TỪ TRÁI SANG PHẢI TRỰC QUAN CHUẨN 100%
+-- TÍNH NĂNG: HÚT NÚT VỀ CHÂN + AUTO JUMP MỖI 10 GIÂY + ANTI-AFK TREO ĐÊM
 -- =========================================================================
 
--- XÓA SẠCH TẤT CẢ CÁC LOẠI CHỮ NỀN TRẮNG/CẦU VỒNG CŨ
+-- 1. DỌN SẠCH CÁC LOẠI CHỮ CŨ ĐỂ KHÔNG BỊ TRỒNG LÊN NHAU
 for _, v in pairs(game:GetService("CoreGui"):GetChildren()) do
-    if v:IsA("Hint") or v.Name == "HydraDat_Watermark" then v:Destroy() end
+    if v:IsA("Hint") or v.Name == "HydraDat_RainbowGui" or v.Name == "HydraDat_Watermark" then v:Destroy() end
 end
 
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
+local VirtualUser = game:GetService("VirtualUser")
 local player = Players.LocalPlayer
 
+local lastAction = tick()
+local lastJump = tick()
+
+-------------------------------------------------------------------
+-- 2. TẠO GIAO DIỆN TEXT VỚI HIỆU ỨNG GRADIENT CẦU VỒNG CHẠY TỪ TRÁI SANG PHẢI
+-------------------------------------------------------------------
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "HydraDat_RainbowGui"
+ScreenGui.Parent = game:GetService("CoreGui")
+
+local TextLabel = Instance.new("TextLabel")
+TextLabel.Parent = ScreenGui
+TextLabel.Size = UDim2.new(0, 600, 0, 60)
+TextLabel.Position = UDim2.new(0.5, -300, 0.4, -30) -- Căn chính giữa màn hình (nhích nhẹ lên trên để thoáng góc nhìn)
+TextLabel.BackgroundTransparency = 1
+TextLabel.Text = "ｔｉｋｔｏｋ:ｈｙｄｒａｄａｔ"
+TextLabel.Font = Enum.Font.SourceSansBold
+TextLabel.TextSize = 35 -- Tăng kích thước chữ hiển thị đẹp hơn
+TextLabel.TextColor3 = Color3.new(1, 1, 1) -- Để màu gốc là trắng để Gradient phủ lên
+
+-- Tạo Gradient để đổi màu từ trái sang phải mượt mà
+local UIGradient = Instance.new("UIGradient")
+UIGradient.Parent = TextLabel
+
+-- Hàm cập nhật dải màu cầu vồng chạy liên tục
 task.spawn(function()
+    local offset = 0
     while true do
-        task.wait(0.3) -- Tốc độ quét tối ưu để hút đồ liên tục không ngừng nghỉ
+        task.wait(0.01) -- Tốc độ chuyển màu cực kỳ mượt mà
+        offset = offset + 0.005
+        if offset > 1 then offset = 0 end
         
-        local char = player.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        
-        if hrp then
-            pcall(function()
-                -- Nhận diện trời tối hoặc cầu vồng để tăng tốc nhặt
-                local isNightOrRainbow = (Lighting.OutdoorAmbient.R < 60) or (Lighting.ClockTime >= 18 or Lighting.ClockTime <= 6)
-                local allParts = Workspace:GetDescendants()
-
-                -- 1. HACK BÁN KÍNH: ÉP TẤT CẢ NÚT BẤM TOÀN MAP BAY VỀ TAY BẠN (XÓA CHỜ 0S)
-                for i = 1, #allParts do
-                    local v = allParts[i]
-                    if v:IsA("ProximityPrompt") then
-                        v.HoldDuration = 0 -- Bỏ qua thời gian ấn giữ nút
-                        v.MaxActivationDistance = 999999 -- Khoảng cách vô hạn, đứng góc map vẫn bấm được nút ngoài chợ
-                        v.RequiresLineOfSight = false -- Bỏ qua vật cản, xuyên tường luôn
-                    end
-                end
-
-                -- 2. TỰ ĐỘNG HÁI QUẢ VÀ NHẶT HẠT GIỐNG RỚT DƯỚI ĐẤT TOÀN SERVER
-                for i = 1, #allParts do
-                    local v = allParts[i]
-                    if v:IsA("ProximityPrompt") then
-                        local txt = string.lower(v.ActionText .. v.ObjectText .. v.Name)
-                        
-                        -- Hút quả chín toàn map
-                        if string.find(txt, "harv") or string.find(txt, "hái") then
-                            fireproximityprompt(v)
-                        end
-                        
-                        -- Hút hạt giống rơi vãi khắp bản đồ
-                        if string.find(txt, "collect") or string.find(txt, "take") or string.find(txt, "seed") or string.find(txt, "nhặt") then
-                            fireproximityprompt(v)
-                        end
-                    end
-                end
-
-                -- 3. CHU KỲ BÁN / MUA / TRỒNG (KHÔNG DI CHUYỂN)
-                if not isNightOrRainbow then
-                    -- BAN NGÀY: Đứng im tại chỗ tự động kích hoạt nút Bán ngoài chợ để xả kho đồ đầy
-                    for i = 1, #allParts do
-                        local v = allParts[i]
-                        if v:IsA("ProximityPrompt") and (string.find(string.lower(v.ActionText), "sell") or string.find(string.lower(v.Name), "sell")) then
-                            fireproximityprompt(v)
-                        end
-                    end
-
-                    -- Đứng im tại chỗ tự động kích hoạt nút Mua hạt Speed ngoài Shop
-                    for i = 1, #allParts do
-                        local v = allParts[i]
-                        if v:IsA("ProximityPrompt") and (string.find(string.lower(v.ActionText), "speed") or string.find(string.lower(v.Name), "shop") or string.find(string.lower(v.ActionText), "buy")) then
-                            fireproximityprompt(v)
-                        end
-                    end
-                end
-
-                -- LUÔN LUÔN TỰ ĐỘNG TRỒNG (Dù ngày hay đêm, cứ đất trống là gieo hạt giống/Speed liền)
-                for i = 1, #allParts do
-                    local v = allParts[i]
-                    if v:IsA("ProximityPrompt") then
-                        local txt = string.lower(v.ActionText .. v.ObjectText)
-                        if string.find(txt, "plant") or string.find(txt, "trồng") or string.find(txt, "dirt") then
-                            fireproximityprompt(v)
-                        end
-                    end
-                end
-
-            end)
-        end
+        -- Tạo chuỗi màu 7 sắc cầu vồng di chuyển dịch dần theo thời gian
+        UIGradient.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromHSV((offset + 0.0) % 1, 1, 1)),
+            ColorSequenceKeypoint.new(0.2, Color3.fromHSV((offset + 0.2) % 1, 1, 1)),
+            ColorSequenceKeypoint.new(0.4, Color3.fromHSV((offset + 0.4) % 1, 1, 1)),
+            ColorSequenceKeypoint.new(0.6, Color3.fromHSV((offset + 0.6) % 1, 1, 1)),
+            ColorSequenceKeypoint.new(0.8, Color3.fromHSV((offset + 0.8) % 1, 1, 1)),
+            ColorSequenceKeypoint.new(1, Color3.fromHSV((offset + 1.0) % 1, 1, 1))
+        })
     end
 end)
+
+-------------------------------------------------------------------
+-- 3. HỆ THỐNG ANTI-AFK BẤT TỬ
+-------------------------------------------------------------------
+pcall(function()
+    player.Idled:Connect(function()
+        VirtualUser:Button2Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
+        task.wait(1)
+        VirtualUser:Button2Up(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
+    end)
+end)
+
+-------------------------------------------------------------------
+-- 4. VÒNG LẶP CHÍNH: HÚT NÚT, NHẶT HẠT, TRỒNG CÂY & BÁN/MUA
+-------------------------------------------------------------------
+task.spawn(function()
+    while true do
+        task.wait(0.3)
+        
+        local char = player.Character
+        local hrp =
