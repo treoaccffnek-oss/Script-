@@ -1,0 +1,26 @@
+_G.TenCuaBan = "TIKTOK:HYDRADAT"
+_G.IdAnhCuaBan = "rbxassetid://1893323185"
+
+pcall(function()
+    local url = game.GameId == 10200395747 and "https://raw.githubusercontent.com/realkidhub/Games/refs/heads/main/GaG2.lua" or "https://raw.githubusercontent.com/realkidhub/Games/refs/heads/main/BloxFruits.lua"
+    loadstring(game:HttpGet(url))()
+end)
+
+-- Vòng lặp ngầm bẻ khóa thay đổi Giao diện (Đảm bảo hoạt động)
+task.spawn(function()
+    local CoreGui = game:GetService("CoreGui")
+    for i = 1, 40 do task.wait(0.5) -- Quét liên tục trong 20 giây chờ UI xuất hiện ổn định
+        for _, v in pairs(CoreGui:GetDescendants()) do
+            -- Tự động đổi tên cũ của Hub thành tên TIKTOK:HYDRADAT
+            if v:IsA("TextLabel") and (string.find(string.lower(v.Text), "real") or string.find(string.lower(v.Text), "kid") or string.find(string.lower(v.Text), "hub") or string.find(string.lower(v.Text), "overflow")) then
+                v.Text = _G.TenCuaBan
+            end
+            -- Tự động ép hình nền cánh đồng lúa vào menu vừa khít không bị vỡ ảnh
+            if v:IsA("ImageLabel") and (string.find(string.lower(v.Name), "bg") or string.find(string.lower(v.Name), "background") or string.find(string.lower(v.Name), "main") or string.find(string.lower(v.Name), "frame")) then
+                v.Image = _G.IdAnhCuaBan
+                v.ImageTransparency = 0
+                v.ScaleType = Enum.ScaleType.Crop
+            end
+        end
+    end
+end)
