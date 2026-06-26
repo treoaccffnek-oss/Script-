@@ -1,122 +1,101 @@
 -- =========================================================================
--- SCRIPT: HYDRADAT BYPASS LAUNCH - GROW A GARDEN 2 (FIX BẬT KHÔNG LÊN)
--- CHỨC NĂNG: ÉP CHẠY NGAY KHI BẬT - TỰ TRỒNG SPEED CÓ SẴN - KHÔNG LAG MÁY
+-- SCRIPT: HYDRADAT RAW INJECTION - SIÊU THÔ SƠ CHỐNG LỖI EXECUTOR
+-- CHỨC NĂNG: BỎ QUA TẤT CẢ GIAO DIỆN - ÉP CHẠY HÁI/TRỒNG/BÁN/MUA TRỰC TIẾP
 -- =========================================================================
+
+print("--- START HYDRADAT GG2 RAW ---")
+
+-- Tạo một dòng chữ thô sơ ngay giữa màn hình để kiểm tra xem script có lên hay không
+local hint = Instance.new("Hint")
+hint.Parent = game:GetService("CoreGui")
+hint.Text = "TIKTOK: HYDRADAT - SCRIPT DANG CHAY CHONG LOI"
 
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local player = Players.LocalPlayer
 
--- Biến lưu vị trí để tránh việc quét lập đi lập lại gây lag
-local lastActionTick = tick()
+local lastAction = tick()
 
-print("--- HYDRADAT GG2 INITIALIZED SUCCESSFULLY ---")
+-- Hàm kích hoạt nút bấm siêu tốc không dùng vòng lặp quét sâu
+function RunFarm()
+    local char = player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
 
--------------------------------------------------------------------
--- HÀM QUÉT NÚT BẤM CƠ BẢN (KHÔNG LO KẸT FILE)
--------------------------------------------------------------------
-local function TriggerPromptsByKeyword(keywords)
-    for _, v in pairs(Workspace:GetDescendants()) do
+    -- Kiểm tra ngày đêm dựa trên độ sáng của game
+    local isNight = Lighting.OutdoorAmbient.R < 55
+
+    -- 1. QUÈT NHANH TOÀN MAP ĐỂ HÁI VÀ TRỒNG SPEED CÓ SẴN TRONG KHO
+    local descendants = Workspace:GetDescendants()
+    for i = 1, #descendants do
+        local v = descendants[i]
         if v:IsA("ProximityPrompt") then
-            local success, txt = pcall(function() 
-                return string.lower(v.ActionText .. v.ObjectText .. v.Name) 
-            end)
+            local txt = string.lower(v.ActionText .. v.ObjectText .. v.Name)
             
-            if success and txt then
-                for _, kw in pairs(keywords) do
-                    if string.find(txt, kw) then
+            -- Tự động hái quả liên tục
+            if string.find(txt, "harv") or string.find(txt, "hái") then
+                fireproximityprompt(v)
+            end
+            
+            -- Tự động trồng hạt thường và hạt Speed khi có ô đất trống
+            if string.find(txt, "plant") or string.find(txt, "trồng") or string.find(txt, "dirt") then
+                fireproximityprompt(v)
+            end
+        end
+    end
+
+    -- 2. CHU KỲ BAN NGÀY: CỨ 10 GIÂY TELE ĐI BÁN VÀ MUA
+    if not isNight then
+        if tick() - lastAction >= 10 then
+            local savedPos = hrp.CFrame
+
+            -- Biến đến bục Bán (Sell)
+            for i = 1, #descendants do
+                local v = descendants[i]
+                if v:IsA("ProximityPrompt") and string.find(string.lower(v.ActionText .. v.Name), "sell") then
+                    if v.Parent:IsA("BasePart") then
+                        hrp.CFrame = CFrame.new(v.Parent.Position + Vector3.new(0, 2, 0))
+                        task.wait(0.4)
                         fireproximityprompt(v)
+                        task.wait(0.4)
+                        break
                     end
                 end
+            end
+
+            -- Biến đến bục Mua (Speed/Shop)
+            for i = 1, #descendants do
+                local v = descendants[i]
+                if v:IsA("ProximityPrompt") and (string.find(string.lower(v.ActionText .. v.Name), "speed") or string.find(string.lower(v.ActionText .. v.Name), "buy")) then
+                    if v.Parent:IsA("BasePart") then
+                        hrp.CFrame = CFrame.new(v.Parent.Position + Vector3.new(0, 2, 0))
+                        task.wait(0.4)
+                        fireproximityprompt(v)
+                        task.wait(0.4)
+                        break
+                    end
+                end
+            end
+
+            -- Quay trở lại vườn cũ
+            hrp.CFrame = savedPos
+            lastAction = tick()
+        end
+    else
+        -- BAN ĐÊM: Khóa vị trí nhân vật tại vườn để thủ quả, chống tele đi bán lung tung
+        for i = 1, #descendants do
+            local v = descendants[i]
+            if v:IsA("BasePart") and (string.find(string.lower(v.Name), "plot") or string.find(string.lower(v.Name), "dirt")) then
+                hrp.CFrame = CFrame.new(v.Position + Vector3.new(0, 4, 0))
+                break
             end
         end
     end
 end
 
--------------------------------------------------------------------
--- ANTI-AFK CHỐNG KICK ĐỘC LẬP
--------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        task.wait(300)
-        pcall(function()
-            local char = player.Character
-            local hum = char and char:FindFirstChildOfClass("Humanoid")
-            if hum then hum.Jump = true end
-        end)
-    end
-end)
-
--------------------------------------------------------------------
--- VÒNG LẶP CHÍNH CHẠY NGAY LẬP TỨC
--------------------------------------------------------------------
-task.spawn(function()
-    while true do
-        task.wait(0.5) -- Đảm bảo máy siêu mượt, xóa sổ hoàn toàn lag
-        
-        local char = player.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        
-        if hrp then
-            pcall(function()
-                -- 1. Kiểm tra Ngày / Đêm bằng độ sáng (Chuẩn map GG2)
-                local isNight = Lighting.OutdoorAmbient.R < 55
-
-                -- 2. LUÔN LUÔN TỰ ĐỘNG HÁI QUẢ (Cả ngày lẫn đêm)
-                TriggerPromptsByKeyword({"harv", "hái"})
-
-                if isNight then
-                    -------------------------------------------------------
-                    -- BAN ĐÊM: THỦ VƯỜN - TỰ ĐỘNG MÓC SPEED TRONG KHO RA TRỒNG
-                    -------------------------------------------------------
-                    -- Chỉ cần trong kho có hạt Speed/Hạt giống, script tự gieo vào ô đất trống
-                    TriggerPromptsByKeyword({"plant", "trồng", "dirt"})
-                else
-                    -------------------------------------------------------
-                    -- BAN NGÀY: VỪA TRỒNG SPEED VỪA ĐẾN GIỜ ĐI BÁN & MUA
-                    -------------------------------------------------------
-                    TriggerPromptsByKeyword({"plant", "trồng", "dirt"})
-
-                    -- Đúng chu kỳ 10 giây sẽ đi chợ
-                    if tick() - lastActionTick >= 10 then
-                        
-                        -- Ghi lại vị trí đứng ở vườn trước khi đi
-                        local oldPosition = hrp.CFrame
-
-                        -- Bước 1: Bay đến chỗ Bán đồ (Sell)
-                        for _, v in pairs(Workspace:GetDescendants()) do
-                            if v:IsA("ProximityPrompt") and string.find(string.lower(v.ActionText .. v.Name), "sell") then
-                                if v.Parent:IsA("BasePart") then
-                                    hrp.CFrame = CFrame.new(v.Parent.Position + Vector3.new(0, 2, 0))
-                                    task.wait(0.3)
-                                    fireproximityprompt(v)
-                                    task.wait(0.3)
-                                    break
-                                end
-                            end
-                        end
-
-                        -- Bước 2: Bay đến chỗ Mua đồ (Speed/Shop)
-                        for _, v in pairs(Workspace:GetDescendants()) do
-                            if v:IsA("ProximityPrompt") and (string.find(string.lower(v.ActionText .. v.Name), "speed") or string.find(string.lower(v.ActionText .. v.Name), "buy")) then
-                                if v.Parent:IsA("BasePart") then
-                                    hrp.CFrame = CFrame.new(v.Parent.Position + Vector3.new(0, 2, 0))
-                                    task.wait(0.3)
-                                    fireproximityprompt(v)
-                                    task.wait(0.3)
-                                    break
-                                end
-                            end
-                        end
-
-                        -- Bước 3: Biến về lại vị trí vườn cũ để tiếp tục gieo hạt
-                        hrp.CFrame = oldPosition
-                        
-                        lastActionTick = tick()
-                    end
-                end
-            end)
-        end
-    end
-end)
+-- Vòng lặp thô sơ ép Executor phải chạy liên tục mỗi 0.5 giây
+while true do
+    pcall(RunFarm)
+    task.wait(0.5)
+end
