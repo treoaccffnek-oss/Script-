@@ -1,10 +1,10 @@
 -- =========================================================================
--- SCRIPT: HYDRADAT GRADIENT RAINBOW EDITION - GROW A GARDEN 2
--- CHỨC NĂNG: TEXT CHUYỂN MÀU CẦU VỒNG TỪ TRÁI SANG PHẢI TRỰC QUAN CHUẨN 100%
--- TÍNH NĂNG: HÚT NÚT VỀ CHÂN + AUTO JUMP MỖI 10 GIÂY + ANTI-AFK TREO ĐÊM
+-- SCRIPT: HYDRADAT ULTRA-LITE LIGHTWEIGHT EDITION - GROW A GARDEN 2
+-- CHỨC NĂNG: TEXT XÁM CHỐNG LAG - HÚT NÚT VỀ CHÂN - AUTO JUMP - ANTI-AFK
+-- CAM KẾT: TỐI ƯU HÓA HOÀN TOÀN, BẬT LÀ CHẠY 100% KHÔNG SẬP GAME
 -- =========================================================================
 
--- 1. DỌN SẠCH CÁC LOẠI CHỮ CŨ ĐỂ KHÔNG BỊ TRỒNG LÊN NHAU
+-- 1. XÓA SẠCH GIAO DIỆN CŨ ĐỂ GIẢM TẢI CHO BỘ NHỚ
 for _, v in pairs(game:GetService("CoreGui"):GetChildren()) do
     if v:IsA("Hint") or v.Name == "HydraDat_RainbowGui" or v.Name == "HydraDat_Watermark" then v:Destroy() end
 end
@@ -12,7 +12,6 @@ end
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
-local TweenService = game:GetService("TweenService")
 local VirtualUser = game:GetService("VirtualUser")
 local player = Players.LocalPlayer
 
@@ -20,7 +19,7 @@ local lastAction = tick()
 local lastJump = tick()
 
 -------------------------------------------------------------------
--- 2. TẠO GIAO DIỆN TEXT VỚI HIỆU ỨNG GRADIENT CẦU VỒNG CHẠY TỪ TRÁI SANG PHẢI
+-- 2. TẠO TEXT MÀU XÁM ĐƠN GIẢN (TRIỆT TIÊU GIẬT LAG)
 -------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "HydraDat_RainbowGui"
@@ -28,37 +27,13 @@ ScreenGui.Parent = game:GetService("CoreGui")
 
 local TextLabel = Instance.new("TextLabel")
 TextLabel.Parent = ScreenGui
-TextLabel.Size = UDim2.new(0, 600, 0, 60)
-TextLabel.Position = UDim2.new(0.5, -300, 0.4, -30) -- Căn chính giữa màn hình (nhích nhẹ lên trên để thoáng góc nhìn)
+TextLabel.Size = UDim2.new(0, 600, 0, 50)
+TextLabel.Position = UDim2.new(0.5, -300, 0.4, -25) -- Căn giữa màn hình
 TextLabel.BackgroundTransparency = 1
 TextLabel.Text = "ｔｉｋｔｏｋ:ｈｙｄｒａｄａｔ"
 TextLabel.Font = Enum.Font.SourceSansBold
-TextLabel.TextSize = 35 -- Tăng kích thước chữ hiển thị đẹp hơn
-TextLabel.TextColor3 = Color3.new(1, 1, 1) -- Để màu gốc là trắng để Gradient phủ lên
-
--- Tạo Gradient để đổi màu từ trái sang phải mượt mà
-local UIGradient = Instance.new("UIGradient")
-UIGradient.Parent = TextLabel
-
--- Hàm cập nhật dải màu cầu vồng chạy liên tục
-task.spawn(function()
-    local offset = 0
-    while true do
-        task.wait(0.01) -- Tốc độ chuyển màu cực kỳ mượt mà
-        offset = offset + 0.005
-        if offset > 1 then offset = 0 end
-        
-        -- Tạo chuỗi màu 7 sắc cầu vồng di chuyển dịch dần theo thời gian
-        UIGradient.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromHSV((offset + 0.0) % 1, 1, 1)),
-            ColorSequenceKeypoint.new(0.2, Color3.fromHSV((offset + 0.2) % 1, 1, 1)),
-            ColorSequenceKeypoint.new(0.4, Color3.fromHSV((offset + 0.4) % 1, 1, 1)),
-            ColorSequenceKeypoint.new(0.6, Color3.fromHSV((offset + 0.6) % 1, 1, 1)),
-            ColorSequenceKeypoint.new(0.8, Color3.fromHSV((offset + 0.8) % 1, 1, 1)),
-            ColorSequenceKeypoint.new(1, Color3.fromHSV((offset + 1.0) % 1, 1, 1))
-        })
-    end
-end)
+TextLabel.TextSize = 32
+TextLabel.TextColor3 = Color3.fromRGB(150, 150, 150) -- Màu xám cố định để giảm tải đồ họa cho máy
 
 -------------------------------------------------------------------
 -- 3. HỆ THỐNG ANTI-AFK BẤT TỬ
@@ -72,11 +47,95 @@ pcall(function()
 end)
 
 -------------------------------------------------------------------
--- 4. VÒNG LẶP CHÍNH: HÚT NÚT, NHẶT HẠT, TRỒNG CÂY & BÁN/MUA
+-- 4. VÒNG LẶP CHÍNH CÀY CUỐC SIÊU MƯỢT
 -------------------------------------------------------------------
 task.spawn(function()
     while true do
-        task.wait(0.3)
+        task.wait(0.4) -- Tăng độ trễ nhẹ lên 0.4s để Executor xử lý kịp, chống kẹt lệnh
         
         local char = player.Character
-        local hrp =
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        
+        if hrp and hum then
+            pcall(function()
+                -- LỆNH NHẢY TỰ ĐỘNG MỖI 10 GIÂY CHỐNG AFK
+                if tick() - lastJump >= 10 then
+                    hum.Jump = true
+                    lastJump = tick()
+                end
+
+                local isNightOrRainbow = (Lighting.OutdoorAmbient.R < 60) or (Lighting.ClockTime >= 18 or Lighting.ClockTime <= 6)
+                local allParts = Workspace:GetDescendants()
+
+                -- ÉP THỜI GIAN GIỮ NÚT = 0 GIÂY
+                for i = 1, #allParts do
+                    local v = allParts[i]
+                    if v:IsA("ProximityPrompt") then
+                        v.HoldDuration = 0
+                        v.RequiresLineOfSight = false
+                    end
+                end
+
+                -- TỰ ĐỘNG HÚT HẠT GIỐNG RƠI VÃI VỀ CHÂN
+                for i = 1, #allParts do
+                    local v = allParts[i]
+                    if v:IsA("ProximityPrompt") then
+                        local txt = string.lower(v.ActionText .. v.ObjectText .. v.Name)
+                        if string.find(txt, "harv") or string.find(txt, "hái") or string.find(txt, "collect") or string.find(txt, "seed") or string.find(txt, "nhặt") then
+                            if v.Parent:IsA("BasePart") and not string.find(txt, "sell") and not string.find(txt, "shop") and not string.find(txt, "buy") then
+                                local oldPos = v.Parent.Position
+                                v.Parent.Position = hrp.Position
+                                task.wait(0.02)
+                                fireproximityprompt(v)
+                                v.Parent.Position = oldPos
+                            end
+                        end
+                    end
+                end
+
+                -- CHU KỲ BÁN VÀ MUA HẠT (MỖI 7 GIÂY BAN NGÀY)
+                if not isNightOrRainbow then
+                    if tick() - lastAction >= 7 then
+                        for i = 1, #allParts do
+                            local v = allParts[i]
+                            -- HÚT NÚT BÁN (SELL)
+                            if v:IsA("ProximityPrompt") and (string.find(string.lower(v.ActionText), "sell") or string.find(string.lower(v.Name), "sell")) then
+                                if v.Parent:IsA("BasePart") then
+                                    local oldPos = v.Parent.Position
+                                    v.Parent.Position = hrp.Position
+                                    task.wait(0.15)
+                                    fireproximityprompt(v)
+                                    v.Parent.Position = oldPos
+                                end
+                            end
+                            -- HÚT NÚT MUA HẠT SPEED
+                            if v:IsA("ProximityPrompt") and (string.find(string.lower(v.ActionText), "speed") or string.find(string.lower(v.Name), "shop") or string.find(string.lower(v.ActionText), "buy")) then
+                                if v.Parent:IsA("BasePart") then
+                                    local oldPos = v.Parent.Position
+                                    v.Parent.Position = hrp.Position
+                                    task.wait(0.15)
+                                    fireproximityprompt(v)
+                                    v.Parent.Position = oldPos
+                                end
+                            end
+                        end
+                        lastAction = tick()
+                    end
+                end
+
+                -- LUÔN LUÔN TỰ ĐỘNG TRỒNG TRÊN ĐẤT TRỐNG VƯỜN NHÀ
+                for i = 1, #allParts do
+                    local v = allParts[i]
+                    if v:IsA("ProximityPrompt") then
+                        local txt = string.lower(v.ActionText .. v.ObjectText)
+                        if string.find(txt, "plant") or string.find(txt, "trồng") or string.find(txt, "dirt") then
+                            fireproximityprompt(v)
+                        end
+                    end
+                end
+
+            end)
+        end
+    end
+end)
