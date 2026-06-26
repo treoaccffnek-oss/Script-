@@ -1,7 +1,7 @@
 -- =========================================================================
--- SCRIPT: HYDRADAT LEGAL-UI TRAVEL - GROW A GARDEN 2
--- CƠ CHẾ: BẤM NÚT UI CỦA GAME ĐỂ DI CHUYỂN -> BÁN/MUA/TRỒNG TẠI CHỖ
--- AN TOÀN: TUYỆT ĐỐI 100% KHÔNG BAN ACC - CHỮ CẦU VỒNG - MAP XÁM GIẢM LAG
+-- SCRIPT: HYDRADAT FULL GRAYSCALE SYSTEM - GROW A GARDEN 2
+-- CƠ CHẾ: NHUỘM XÁM TOÀN BỘ SERVER (MAP + SKIN BẠN + SKIN NGƯỜI CHƠI) KHỬ LAG
+-- HIỂN THỊ: CHỮ CẦU VỒNG GIỮA MÀN HÌNH KHÔNG ĐỔI MÀU XÁM
 -- =========================================================================
 
 -- 1. DỌN SẠCH CÁC LOẠI CHỮ CŨ
@@ -57,24 +57,44 @@ task.spawn(function()
 end)
 
 -------------------------------------------------------------------
--- 3. GIẢM TẢI ĐỒ HỌA: ÉP TẤT CẢ VẬT THỂ GAME THÀNH MÀU XÁM ĐỂ GIẢM LAG
+-- 3. CHUYỂN TOÀN BỘ MAP, SKIN BẠN VÀ SKIN CẢ SERVER THÀNH MÀU XÁM
 -------------------------------------------------------------------
-local function CleanGraphics()
-    for _, v in pairs(Workspace:GetDescendants()) do
-        if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then
-            v.Color = Color3.fromRGB(130, 130, 130)
-            v.Material = Enum.Material.SmoothPlastic
-            v.CastShadow = false
-        elseif v:IsA("Decal") or v:IsA("Texture") then
-            v:Destroy()
+local function ColorPartGray(v)
+    if v:IsA("BasePart") then
+        v.Color = Color3.fromRGB(130, 130, 130) -- Màu xám tối ưu
+        v.Material = Enum.Material.SmoothPlastic -- Xóa vân bề mặt để giảm lag
+        v.CastShadow = false -- Tắt đổ bóng
+    elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("Shirt") or v:IsA("Pants") or v:IsA("ShirtGraphic") or v:IsA("CharacterMesh") then
+        v:Destroy() -- Xóa quần áo, hình dán trên người để mượt tuyệt đối
+    elseif v:IsA("Accessory") or v:IsA("Hat") then
+        -- Nhuộm xám cả mũ, tóc, cánh, phụ kiện đeo trên người
+        local handle = v:FindFirstChild("Handle")
+        if handle and handle:IsA("BasePart") then
+            handle.Color = Color3.fromRGB(130, 130, 130)
+            handle.Material = Enum.Material.SmoothPlastic
+            local mesh = handle:FindFirstChildOfClass("SpecialMesh")
+            if mesh then mesh.TextureId = "" end -- Xóa màu của phụ kiện
         end
     end
+end
+
+local function CleanGraphics()
+    -- Quét nhuộm xám toàn bộ vật thể có sẵn trong map
+    for _, v in pairs(Workspace:GetDescendants()) do
+        ColorPartGray(v)
+    end
     Lighting.GlobalShadows = false
+    
+    -- Lắng nghe xem có vật thể mới rớt ra hoặc có người chơi mới vào thì nhuộm xám luôn
+    Workspace.DescendantAdded:Connect(function(v)
+        task.wait()
+        ColorPartGray(v)
+    end)
 end
 task.spawn(CleanGraphics)
 
 -------------------------------------------------------------------
--- 4. ANTI-AFK TREO MÁY BẤT TỬ + TỰ NHẢY MỖI 10S
+-- 4. ANTI-AFK TREO MÁY BẤT TỬ
 -------------------------------------------------------------------
 pcall(function()
     player.Idled:Connect(function()
@@ -84,16 +104,27 @@ pcall(function()
     end)
 end)
 
--- Hàm tìm và click vào nút trên màn hình của game (Hỗ trợ quét cả TextButton lẫn ImageButton)
-local function ClickGameButton(nameKeyword)
-    for _, btn in pairs(pgui:GetDescendants()) do
-        if (btn:IsA("TextButton") or btn:IsA("ImageButton")) and btn.Visible then
-            local btnName = string.lower(btn.Name)
-            local btnText = btn:IsA("TextButton") and string.lower(btn.Text) or ""
-            if string.find(btnName, nameKeyword) or string.find(btnText, nameKeyword) then
-                -- Giả lập nhấn nút hệ thống
-                firesignal(btn.MouseButton1Click)
-                firesignal(btn.Activated)
+-- Hàm ép click cưỡng bức vào nút UI của game
+local function ForceClickUI(keywords)
+    for _, v in pairs(pgui:GetDescendants()) do
+        if v:IsA("TextButton") or v:IsA("ImageButton") then
+            local matched = false
+            local name = string.lower(v.Name)
+            local text = v:IsA("TextButton") and string.lower(v.Text) or ""
+            
+            for _, kw in pairs(keywords) do
+                if string.find(name, kw) or string.find(text, kw) then
+                    matched = true
+                    break
+                end
+            end
+            
+            if matched and v.AbsoluteSize.X > 0 and v.AbsoluteSize.Y > 0 then
+                pcall(function()
+                    firesignal(v.MouseButton1Click)
+                    firesignal(v.MouseButton1Down)
+                    firesignal(v.Activated)
+                end)
                 return true
             end
         end
@@ -102,11 +133,11 @@ local function ClickGameButton(nameKeyword)
 end
 
 -------------------------------------------------------------------
--- 5. VÒNG LẶP TUYẾN TÍNH CHẠY TỪ TỪ THEO CHU KỲ NÚT BẤM UI
+-- 5. VÒNG LẶP TUYẾN TÍNH HOẠT ĐỘNG TỪ TỪ KHÔNG LAG
 -------------------------------------------------------------------
 task.spawn(function()
     while true do
-        task.wait(0.6)
+        task.wait(0.5)
         
         local char = player.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -118,13 +149,13 @@ task.spawn(function()
                 if tick() - lastJump >= 10 then
                     hum.Jump = true
                     lastJump = tick()
-                    task.wait(0.4)
+                    task.wait(0.3)
                 end
 
                 local isNightOrRainbow = (Lighting.OutdoorAmbient.R < 60) or (Lighting.ClockTime >= 18 or Lighting.ClockTime <= 6)
                 local allParts = Workspace:GetDescendants()
 
-                -- CẤU HÌNH THỜI GIAN ẤN NÚT VỀ 0S
+                -- SỬA THỜI GIAN GIỮ NÚT
                 for i = 1, #allParts do
                     local v = allParts[i]
                     if v:IsA("ProximityPrompt") then
@@ -133,77 +164,65 @@ task.spawn(function()
                     end
                 end
 
-                -- ========================================================
-                -- CHU KỲ BAN NGÀY: CLICK UI ĐỂ ĐI SELL VÀ BUY TẠI CHỖ
-                -- ========================================================
+                -- CHU KỲ ĐI CHỢ BAN NGÀY
                 if not isNightOrRainbow then
-                    if tick() - lastAction >= 8 then -- Tăng lên 8 giây đi buôn một lần cho thong thả
+                    if tick() - lastAction >= 8 then
                         
-                        -- Bước A: Bấm nút UI "Sell" hoặc "Market" để biến ra chợ
-                        if ClickGameButton("sell") or ClickGameButton("market") or ClickGameButton("chợ") or ClickGameButton("bán") then
-                            task.wait(1.2) -- Chờ game dịch chuyển nhân vật ra tới nơi ổn định
-                            
-                            -- Đang đứng ở chợ -> Kích hoạt nút bấm Sell vật lý
+                        -- BƯỚC A: Đi bán đồ
+                        if ForceClickUI({"sell", "market", "chợ", "bán", "teleport"}) then
+                            task.wait(1.5)
                             for i = 1, #allParts do
                                 local v = allParts[i]
                                 if v:IsA("ProximityPrompt") and (string.find(string.lower(v.ActionText), "sell") or string.find(string.lower(v.Name), "sell")) then
-                                    if (v.Parent.Position - hrp.Position).Magnitude < 30 then
+                                    if (v.Parent.Position - hrp.Position).Magnitude < 40 then
                                         fireproximityprompt(v)
-                                        task.wait(0.5)
+                                        task.wait(0.4)
                                         break
                                     end
                                 end
                             end
                         end
 
-                        -- Bước B: Bấm nút UI "Shop" hoặc "Speed" để biến qua chỗ mua hạt
-                        if ClickGameButton("shop") or ClickGameButton("speed") or ClickGameButton("buy") or ClickGameButton("mua") then
-                            task.wait(1.2) -- Chờ game đưa sang bục shop
-                            
-                            -- Đang đứng ở Shop -> Kích hoạt nút bấm mua hạt Speed
+                        -- BƯỚC B: Đi mua hạt giống Speed
+                        if ForceClickUI({"shop", "speed", "buy", "mua", "seed"}) then
+                            task.wait(1.5)
                             for i = 1, #allParts do
                                 local v = allParts[i]
-                                if v:IsA("ProximityPrompt") and (string.find(string.lower(v.ActionText), "speed") or string.find(string.lower(v.Name), "shop")) then
-                                    if (v.Parent.Position - hrp.Position).Magnitude < 30 then
+                                if v:IsA("ProximityPrompt") and (string.find(string.lower(v.ActionText), "speed") or string.find(string.lower(v.Name), "shop") or string.find(string.lower(v.ActionText), "buy")) then
+                                    if (v.Parent.Position - hrp.Position).Magnitude < 40 then
                                         fireproximityprompt(v)
-                                        task.wait(0.5)
+                                        task.wait(0.4)
                                         break
                                     end
                                 end
                             end
                         end
 
-                        -- Bước C: Xong việc -> Bấm nút UI "Garden" hoặc "Plot" hoặc "Home" để biến về lại vườn nhà
-                        if ClickGameButton("garden") or ClickGameButton("plot") or ClickGameButton("home") or ClickGameButton("vườn") then
-                            task.wait(1.2) -- Chờ biến về vườn an toàn
-                        end
+                        -- BƯỚC C: Quay về vườn
+                        ForceClickUI({"garden", "plot", "home", "vườn", "my plot"})
+                        task.wait(1.5)
                         
                         lastAction = tick()
                     end
                 end
 
-                -- ========================================================
-                -- BƯỚC THƯỜNG TRỰC: TỰ ĐỘNG HÁI QUẢ VÀ NHẶT HẠT XUNG QUANH VƯỜN
-                -- ========================================================
+                -- TỰ ĐỘNG HÁI QUẢ VÀ NHẶT HẠT XUNG QUANH TỪ TỪ
                 for i = 1, #allParts do
                     local v = allParts[i]
                     if v:IsA("ProximityPrompt") then
                         local txt = string.lower(v.ActionText .. v.ObjectText .. v.Name)
                         if string.find(txt, "harv") or string.find(txt, "hái") or string.find(txt, "collect") or string.find(txt, "seed") or string.find(txt, "nhặt") then
                             if not string.find(txt, "sell") and not string.find(txt, "shop") and not string.find(txt, "buy") then
-                                -- Chỉ nhặt vật thể ở cự ly gần bục vừa biến về để không bị kẹt lỗi khoảng cách
                                 if (v.Parent.Position - hrp.Position).Magnitude < 35 then
                                     fireproximityprompt(v)
-                                    task.wait(0.1)
+                                    task.wait(0.15)
                                 end
                             end
                         end
                     end
                 end
 
-                -- ========================================================
-                -- BƯỚC THƯỜNG TRỰC: TỰ ĐỘNG TRỒNG CÂY KHI ĐANG ĐỨNG Ở VƯỜN NHÀ
-                -- ========================================================
+                -- TỰ ĐỘNG TRỒNG CÂY TỪ TỪ
                 for i = 1, #allParts do
                     local v = allParts[i]
                     if v:IsA("ProximityPrompt") then
@@ -211,7 +230,7 @@ task.spawn(function()
                         if string.find(txt, "plant") or string.find(txt, "trồng") or string.find(txt, "dirt") then
                             if (v.Parent.Position - hrp.Position).Magnitude < 35 then
                                 fireproximityprompt(v)
-                                task.wait(0.1) -- Trồng từ từ từng ô một cực kỳ mượt mà
+                                task.wait(0.15)
                             end
                         end
                     end
