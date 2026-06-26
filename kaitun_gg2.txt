@@ -1,7 +1,7 @@
 -- =========================================================================
--- SCRIPT: HYDRADAT FULL GRAYSCALE SYSTEM - GROW A GARDEN 2
--- CƠ CHẾ: NHUỘM XÁM TOÀN BỘ SERVER (MAP + SKIN BẠN + SKIN NGƯỜI CHƠI) KHỬ LAG
--- HIỂN THỊ: CHỮ CẦU VỒNG GIỮA MÀN HÌNH KHÔNG ĐỔI MÀU XÁM
+-- SCRIPT: HYDRADAT BRUTE-FORCE UI CLICKER - GROW A GARDEN 2
+-- CƠ CHẾ: QUÉT RỘNG TẤT CẢ NÚT UI TRÊN MÀN HÌNH ĐỂ CLICK ĐI BÁN/MUA/VỀ VƯỜN
+-- ĐỒ HỌA: CHỮ CẦU VỒNG LOANG MƯỢT GIỮA MÀN HÌNH - TOÀN BỘ SERVER MÀU XÁM KHỬ LAG
 -- =========================================================================
 
 -- 1. DỌN SẠCH CÁC LOẠI CHỮ CŨ
@@ -61,31 +61,27 @@ end)
 -------------------------------------------------------------------
 local function ColorPartGray(v)
     if v:IsA("BasePart") then
-        v.Color = Color3.fromRGB(130, 130, 130) -- Màu xám tối ưu
-        v.Material = Enum.Material.SmoothPlastic -- Xóa vân bề mặt để giảm lag
-        v.CastShadow = false -- Tắt đổ bóng
+        v.Color = Color3.fromRGB(130, 130, 130)
+        v.Material = Enum.Material.SmoothPlastic
+        v.CastShadow = false
     elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("Shirt") or v:IsA("Pants") or v:IsA("ShirtGraphic") or v:IsA("CharacterMesh") then
-        v:Destroy() -- Xóa quần áo, hình dán trên người để mượt tuyệt đối
+        v:Destroy()
     elseif v:IsA("Accessory") or v:IsA("Hat") then
-        -- Nhuộm xám cả mũ, tóc, cánh, phụ kiện đeo trên người
         local handle = v:FindFirstChild("Handle")
         if handle and handle:IsA("BasePart") then
             handle.Color = Color3.fromRGB(130, 130, 130)
             handle.Material = Enum.Material.SmoothPlastic
             local mesh = handle:FindFirstChildOfClass("SpecialMesh")
-            if mesh then mesh.TextureId = "" end -- Xóa màu của phụ kiện
+            if mesh then mesh.TextureId = "" end
         end
     end
 end
 
 local function CleanGraphics()
-    -- Quét nhuộm xám toàn bộ vật thể có sẵn trong map
     for _, v in pairs(Workspace:GetDescendants()) do
         ColorPartGray(v)
     end
     Lighting.GlobalShadows = false
-    
-    -- Lắng nghe xem có vật thể mới rớt ra hoặc có người chơi mới vào thì nhuộm xám luôn
     Workspace.DescendantAdded:Connect(function(v)
         task.wait()
         ColorPartGray(v)
@@ -104,36 +100,44 @@ pcall(function()
     end)
 end)
 
--- Hàm ép click cưỡng bức vào nút UI của game
-local function ForceClickUI(keywords)
+-- HÀM QUÉT TOÀN DIỆN VÀ ÉP CLICK VÀO CÁC NÚT TẢN MẠN TRÊN MÀN HÌNH
+local function MasterClickUI(keywords)
+    local clicked = false
     for _, v in pairs(pgui:GetDescendants()) do
         if v:IsA("TextButton") or v:IsA("ImageButton") then
-            local matched = false
+            local target = false
             local name = string.lower(v.Name)
             local text = v:IsA("TextButton") and string.lower(v.Text) or ""
             
+            -- Kiểm tra xem tên nút hoặc chữ trên nút có khớp từ khóa không
             for _, kw in pairs(keywords) do
                 if string.find(name, kw) or string.find(text, kw) then
-                    matched = true
+                    target = true
                     break
                 end
             end
             
-            if matched and v.AbsoluteSize.X > 0 and v.AbsoluteSize.Y > 0 then
+            -- Nếu khớp và nút đang hiển thị trên màn hình
+            if target and v.Visible and v.AbsoluteSize.X > 0 then
                 pcall(function()
+                    -- Kích hoạt mọi loại tín hiệu click có thể có
                     firesignal(v.MouseButton1Click)
                     firesignal(v.MouseButton1Down)
                     firesignal(v.Activated)
+                    if getconnections then
+                        for _, con in pairs(getconnections(v.MouseButton1Click)) do con:Fire() end
+                        for _, con in pairs(getconnections(v.Activated)) do con:Fire() end
+                    end
                 end)
-                return true
+                clicked = true
             end
         end
     end
-    return false
+    return clicked
 end
 
 -------------------------------------------------------------------
--- 5. VÒNG LẶP TUYẾN TÍNH HOẠT ĐỘNG TỪ TỪ KHÔNG LAG
+-- 5. VÒNG LẶP HÀNH ĐỘNG TUẦN TỰ (SỬ DỤNG PHƯƠNG THỨC CLICK NÚT TRÊN UI)
 -------------------------------------------------------------------
 task.spawn(function()
     while true do
@@ -164,49 +168,51 @@ task.spawn(function()
                     end
                 end
 
-                -- CHU KỲ ĐI CHỢ BAN NGÀY
+                -- CHU KỲ BẤM NÚT ĐI CHỢ BAN NGÀY (CỨ 8 GIÂY BẤM 1 LẦN)
                 if not isNightOrRainbow then
                     if tick() - lastAction >= 8 then
                         
-                        -- BƯỚC A: Đi bán đồ
-                        if ForceClickUI({"sell", "market", "chợ", "bán", "teleport"}) then
-                            task.wait(1.5)
-                            for i = 1, #allParts do
-                                local v = allParts[i]
-                                if v:IsA("ProximityPrompt") and (string.find(string.lower(v.ActionText), "sell") or string.find(string.lower(v.Name), "sell")) then
-                                    if (v.Parent.Position - hrp.Position).Magnitude < 40 then
-                                        fireproximityprompt(v)
-                                        task.wait(0.4)
-                                        break
-                                    end
+                        -- BƯỚC A: Tìm và bấm nút Sell/Market ở trên màn hình để lại gần bục bán
+                        MasterClickUI({"sell", "market", "chợ", "bán", "teleport"})
+                        task.wait(1.5) -- Chờ game nhận lệnh click và đưa nhân vật đi
+                        
+                        -- Kích hoạt nút bấm Sell vật lý tại chỗ vừa tới
+                        for i = 1, #allParts do
+                            local v = allParts[i]
+                            if v:IsA("ProximityPrompt") and (string.find(string.lower(v.ActionText), "sell") or string.find(string.lower(v.Name), "sell")) then
+                                if (v.Parent.Position - hrp.Position).Magnitude < 40 then
+                                    fireproximityprompt(v)
+                                    task.wait(0.4)
+                                    break
                                 end
                             end
                         end
 
-                        -- BƯỚC B: Đi mua hạt giống Speed
-                        if ForceClickUI({"shop", "speed", "buy", "mua", "seed"}) then
-                            task.wait(1.5)
-                            for i = 1, #allParts do
-                                local v = allParts[i]
-                                if v:IsA("ProximityPrompt") and (string.find(string.lower(v.ActionText), "speed") or string.find(string.lower(v.Name), "shop") or string.find(string.lower(v.ActionText), "buy")) then
-                                    if (v.Parent.Position - hrp.Position).Magnitude < 40 then
-                                        fireproximityprompt(v)
-                                        task.wait(0.4)
-                                        break
-                                    end
+                        -- BƯỚC B: Tìm và bấm nút Shop/Speed ở trên màn hình để lại gần bục mua
+                        MasterClickUI({"shop", "speed", "buy", "mua", "seed"})
+                        task.wait(1.5) -- Chờ game đưa sang bục shop
+                        
+                        -- Kích hoạt nút bấm mua hạt Speed vật lý tại chỗ vừa tới
+                        for i = 1, #allParts do
+                            local v = allParts[i]
+                            if v:IsA("ProximityPrompt") and (string.find(string.lower(v.ActionText), "speed") or string.find(string.lower(v.Name), "shop") or string.find(string.lower(v.ActionText), "buy")) then
+                                if (v.Parent.Position - hrp.Position).Magnitude < 40 then
+                                    fireproximityprompt(v)
+                                    task.wait(0.4)
+                                    break
                                 end
                             end
                         end
 
-                        -- BƯỚC C: Quay về vườn
-                        ForceClickUI({"garden", "plot", "home", "vườn", "my plot"})
-                        task.wait(1.5)
+                        -- BƯỚC C: Làm xong việc thì bấm nút Garden ở trên để biến về vườn trồng cây tiếp
+                        MasterClickUI({"garden", "plot", "home", "vườn", "my plot"})
+                        task.wait(1.5) -- Chờ biến về vườn an toàn
                         
                         lastAction = tick()
                     end
                 end
 
-                -- TỰ ĐỘNG HÁI QUẢ VÀ NHẶT HẠT XUNG QUANH TỪ TỪ
+                -- TỰ ĐỘNG HÁI QUẢ VÀ NHẶT HẠT XUNG QUANH TỪ TỪ KHI ĐANG Ở VƯỜN
                 for i = 1, #allParts do
                     local v = allParts[i]
                     if v:IsA("ProximityPrompt") then
@@ -215,14 +221,14 @@ task.spawn(function()
                             if not string.find(txt, "sell") and not string.find(txt, "shop") and not string.find(txt, "buy") then
                                 if (v.Parent.Position - hrp.Position).Magnitude < 35 then
                                     fireproximityprompt(v)
-                                    task.wait(0.15)
+                                    task.wait(0.12)
                                 end
                             end
                         end
                     end
                 end
 
-                -- TỰ ĐỘNG TRỒNG CÂY TỪ TỪ
+                -- TỰ ĐỘNG TRỒNG CÂY TỪ TỪ KHI ĐANG Ở VƯỜN
                 for i = 1, #allParts do
                     local v = allParts[i]
                     if v:IsA("ProximityPrompt") then
@@ -230,7 +236,7 @@ task.spawn(function()
                         if string.find(txt, "plant") or string.find(txt, "trồng") or string.find(txt, "dirt") then
                             if (v.Parent.Position - hrp.Position).Magnitude < 35 then
                                 fireproximityprompt(v)
-                                task.wait(0.15)
+                                task.wait(0.12)
                             end
                         end
                     end
