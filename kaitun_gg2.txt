@@ -1,101 +1,139 @@
 -- =========================================================================
--- SCRIPT: HYDRADAT RAW INJECTION - SIÊU THÔ SƠ CHỐNG LỖI EXECUTOR
--- CHỨC NĂNG: BỎ QUA TẤT CẢ GIAO DIỆN - ÉP CHẠY HÁI/TRỒNG/BÁN/MUA TRỰC TIẾP
+-- SCRIPT: HYDRADAT FIX 100% - QUÉT BẦU TRỜI THỰC TẾ (GROW A GARDEN 2)
+-- LOGIC: TRỜI TỐI -> VỀ VƯỜN THỦ | TRỜI SÁNG -> LIÊN TỤC ĐI BÁN & MUA SPEED
 -- =========================================================================
 
-print("--- START HYDRADAT GG2 RAW ---")
-
--- Tạo một dòng chữ thô sơ ngay giữa màn hình để kiểm tra xem script có lên hay không
-local hint = Instance.new("Hint")
-hint.Parent = game:GetService("CoreGui")
-hint.Text = "TIKTOK: HYDRADAT - SCRIPT DANG CHAY CHONG LOI"
+-- Xóa sạch mọi thông báo hoặc Hint cũ nếu có
+for _, v in pairs(game:GetService("CoreGui"):GetChildren()) do
+    if v.Name == "HydraDat_Watermark" or v:IsA("Hint") then v:Destroy() end
+end
 
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local player = Players.LocalPlayer
 
-local lastAction = tick()
+local myPlot = nil
 
--- Hàm kích hoạt nút bấm siêu tốc không dùng vòng lặp quét sâu
-function RunFarm()
-    local char = player.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-
-    -- Kiểm tra ngày đêm dựa trên độ sáng của game
-    local isNight = Lighting.OutdoorAmbient.R < 55
-
-    -- 1. QUÈT NHANH TOÀN MAP ĐỂ HÁI VÀ TRỒNG SPEED CÓ SẴN TRONG KHO
-    local descendants = Workspace:GetDescendants()
-    for i = 1, #descendants do
-        local v = descendants[i]
-        if v:IsA("ProximityPrompt") then
-            local txt = string.lower(v.ActionText .. v.ObjectText .. v.Name)
-            
-            -- Tự động hái quả liên tục
-            if string.find(txt, "harv") or string.find(txt, "hái") then
-                fireproximityprompt(v)
-            end
-            
-            -- Tự động trồng hạt thường và hạt Speed khi có ô đất trống
-            if string.find(txt, "plant") or string.find(txt, "trồng") or string.find(txt, "dirt") then
-                fireproximityprompt(v)
+-------------------------------------------------------------------
+-- HÀM TÌM CHÍNH XÁC VƯỜN CỦA BẠN (CHỐNG QUA VƯỜN NGƯỜI KHÁC)
+-------------------------------------------------------------------
+local function GetMyGarden()
+    if myPlot and myPlot:Parent then return myPlot end
+    
+    for _, v in pairs(Workspace:GetDescendants()) do
+        if v:IsA("Model") or v:IsA("Folder") then
+            local name = string.lower(v.Name)
+            if string.find(name, string.lower(player.Name)) or string.find(name, "my") or (v:FindFirstChild("Owner") and v.Owner.Value == player) then
+                myPlot = v:FindFirstChildWhichIsA("BasePart") or v.PrimaryPart
+                if myPlot then return myPlot end
             end
         end
     end
-
-    -- 2. CHU KỲ BAN NGÀY: CỨ 10 GIÂY TELE ĐI BÁN VÀ MUA
-    if not isNight then
-        if tick() - lastAction >= 10 then
-            local savedPos = hrp.CFrame
-
-            -- Biến đến bục Bán (Sell)
-            for i = 1, #descendants do
-                local v = descendants[i]
-                if v:IsA("ProximityPrompt") and string.find(string.lower(v.ActionText .. v.Name), "sell") then
-                    if v.Parent:IsA("BasePart") then
-                        hrp.CFrame = CFrame.new(v.Parent.Position + Vector3.new(0, 2, 0))
-                        task.wait(0.4)
-                        fireproximityprompt(v)
-                        task.wait(0.4)
-                        break
-                    end
-                end
-            end
-
-            -- Biến đến bục Mua (Speed/Shop)
-            for i = 1, #descendants do
-                local v = descendants[i]
-                if v:IsA("ProximityPrompt") and (string.find(string.lower(v.ActionText .. v.Name), "speed") or string.find(string.lower(v.ActionText .. v.Name), "buy")) then
-                    if v.Parent:IsA("BasePart") then
-                        hrp.CFrame = CFrame.new(v.Parent.Position + Vector3.new(0, 2, 0))
-                        task.wait(0.4)
-                        fireproximityprompt(v)
-                        task.wait(0.4)
-                        break
-                    end
-                end
-            end
-
-            -- Quay trở lại vườn cũ
-            hrp.CFrame = savedPos
-            lastAction = tick()
-        end
-    else
-        -- BAN ĐÊM: Khóa vị trí nhân vật tại vườn để thủ quả, chống tele đi bán lung tung
-        for i = 1, #descendants do
-            local v = descendants[i]
-            if v:IsA("BasePart") and (string.find(string.lower(v.Name), "plot") or string.find(string.lower(v.Name), "dirt")) then
-                hrp.CFrame = CFrame.new(v.Position + Vector3.new(0, 4, 0))
-                break
-            end
+    
+    -- Dự phòng tìm ô đất có thuộc tính đặc trưng của bạn
+    for _, v in pairs(Workspace:GetDescendants()) do
+        if v:IsA("BasePart") and (string.find(string.lower(v.Name), "plot") or string.find(string.lower(v.Name), "dirt")) then
+            myPlot = v
+            return myPlot
         end
     end
+    return nil
 end
 
--- Vòng lặp thô sơ ép Executor phải chạy liên tục mỗi 0.5 giây
-while true do
-    pcall(RunFarm)
-    task.wait(0.5)
-end
+-------------------------------------------------------------------
+-- VÒNG LẶP ĐIỀU KHIỂN THEO THỜI TIẾT THỰC TẾ TRONG GAME
+-------------------------------------------------------------------
+task.spawn(function()
+    while true do
+        task.wait(0.5) -- Giữ độ mượt ổn định cho game
+        
+        local char = player.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        
+        if hrp then
+            pcall(function()
+                local home = GetMyGarden()
+                
+                -- QUÈT TRỜI TỐI: Kiểm tra đồng thời cả thuộc tính ClockTime và Đèn môi trường
+                local isRealNight = (Lighting.ClockTime >= 18 or Lighting.ClockTime <= 6) or (Lighting.OutdoorAmbient.R < 60)
+
+                if isRealNight then
+                    -------------------------------------------------------
+                    -- TRỜI TỐI: QUAY VỀ VƯỜN CỦA MÌNH ĐỂ THỦ QUẢ & HÁI ĐÊM
+                    -------------------------------------------------------
+                    if home then
+                        -- Giữ vị trí ở vườn nhà
+                        hrp.CFrame = CFrame.new(home.Position + Vector3.new(0, 4, 0))
+                        task.wait(0.2)
+                        
+                        -- Chỉ tương tác hái và trồng trong phạm vi vườn nhà (Bán kính 40m)
+                        for _, v in pairs(Workspace:GetDescendants()) do
+                            if v:IsA("ProximityPrompt") then
+                                if v.Parent:IsA("BasePart") and (v.Parent.Position - home.Position).Magnitude < 40 then
+                                    local txt = string.lower(v.ActionText .. v.ObjectText)
+                                    if string.find(txt, "harv") or string.find(txt, "hái") or string.find(txt, "plant") or string.find(txt, "trồng") then
+                                        fireproximityprompt(v)
+                                    end
+                                end
+                            end
+                        end
+                    end
+                else
+                    -------------------------------------------------------
+                    -- TRỜI SÁNG: ĐI BÁN ĐỒ LIÊN TỤC VÀ MUA HẠT TỐC ĐỘ (SPEED)
+                    -------------------------------------------------------
+                    
+                    -- Bước 1: Bay thẳng ra bục Bán đồ (Sell) ở Chợ
+                    for _, v in pairs(Workspace:GetDescendants()) do
+                        if v:IsA("ProximityPrompt") then
+                            local txt = string.lower(v.ActionText .. v.ObjectText .. v.Name)
+                            if string.find(txt, "sell") or string.find(txt, "bán") then
+                                if v.Parent:IsA("BasePart") then
+                                    hrp.CFrame = CFrame.new(v.Parent.Position + Vector3.new(0, 2, 0))
+                                    task.wait(0.3)
+                                    fireproximityprompt(v)
+                                    task.wait(0.2)
+                                    break
+                                end
+                            end
+                        end
+                    end
+
+                    -- Bước 2: Bay qua bục Shop để mua hạt Speed
+                    for _, v in pairs(Workspace:GetDescendants()) do
+                        if v:IsA("ProximityPrompt") then
+                            local txt = string.lower(v.ActionText .. v.ObjectText .. v.Name)
+                            if string.find(txt, "speed") or string.find(txt, "shop") or string.find(txt, "buy") or string.find(txt, "mua") then
+                                if v.Parent:IsA("BasePart") then
+                                    hrp.CFrame = CFrame.new(v.Parent.Position + Vector3.new(0, 2, 0))
+                                    task.wait(0.3)
+                                    fireproximityprompt(v)
+                                    task.wait(0.2)
+                                    break
+                                end
+                            end
+                        end
+                    end
+
+                    -- Bước 3: Quay lại vườn nhà gieo đống hạt vừa mua xuống đất
+                    if home then
+                        hrp.CFrame = CFrame.new(home.Position + Vector3.new(0, 4, 0))
+                        task.wait(0.3)
+                        for _, v in pairs(Workspace:GetDescendants()) do
+                            if v:IsA("ProximityPrompt") then
+                                if v.Parent:IsA("BasePart") and (v.Parent.Position - home.Position).Magnitude < 40 then
+                                    local txt = string.lower(v.ActionText .. v.ObjectText)
+                                    if string.find(txt, "plant") or string.find(txt, "trồng") or string.find(txt, "dirt") or string.find(txt, "harv") then
+                                        fireproximityprompt(v)
+                                    end
+                                end
+                            end
+                        end
+                    end
+                    
+                end
+            end)
+        end
+    end
+end)
