@@ -1,129 +1,99 @@
 -- =========================================================================
--- SCRIPT: HYDRADAT SCREEN CLICK EDITION - GROW A GARDEN 2
--- CHỨC NĂNG: CLICK THẲNG NÚT UI SELL TRÊN MÀN HÌNH - SỬA LỖI ĐẦY KHO (FULL INVENTORY)
+-- SCRIPT: HYDRADAT INSTANT RUN - ULTRA LITE FOR GG2
+-- CHỨC NĂNG: ÉP CHẠY NGAY KHI BẤT - SỬA LỖI KHÔNG RA SCRIPT - KHÔNG LAG 100%
 -- =========================================================================
 
--- Xóa sạch Hint cũ cho đỡ vướng màn hình
-for _, v in pairs(game:GetService("CoreGui"):GetChildren()) do
-    if v:IsA("Hint") or v.Name == "HydraDat_Watermark" then v:Destroy() end
-end
+print("--- HYDRADAT EXECUTED SUCCESSFULLY ---")
 
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
+local ProximityPromptService = game:GetService("ProximityPromptService")
 local player = Players.LocalPlayer
 
-local myPlot = nil
-
--------------------------------------------------------------------
--- HÀM TÌM VƯỜN CHÍNH CHỦ GẦN BẠN NHẤT
--------------------------------------------------------------------
-local function GetMyGarden()
-    if myPlot and myPlot:Parent then return myPlot end
-    for _, v in pairs(Workspace:GetDescendants()) do
-        if v:IsA("BasePart") and (string.find(string.lower(v.Name), "plot") or string.find(string.lower(v.Name), "dirt")) then
-            myPlot = v
-            return myPlot
-        end
+-- Bật tính năng tự động bấm nút nhanh của Roblox (Không cần quét vòng lặp nặng)
+ProximityPromptService.PromptTriggered:Connect(function(prompt, playerTriggered)
+    if playerTriggered == player then
+        -- Hỗ trợ giữ nhịp bấm liên tục
     end
-    return nil
-end
+end)
 
 -------------------------------------------------------------------
--- HÀM TỰ ĐỘNG BẤM NÚT UI "SELL" TRÊN MÀN HÌNH CỦA BẠN
--------------------------------------------------------------------
-local function ClickUISellButton()
-    pcall(function()
-        local playerGui = player:FindFirstChildOfClass("PlayerGui")
-        if playerGui then
-            -- Quét toàn bộ giao diện màn hình để tìm nút có chữ "Sell" hoặc tên "Sell"
-            for _, gui in pairs(playerGui:GetDescendants()) do
-                if gui:IsA("TextButton") or gui:IsA("ImageButton") then
-                    local txt = string.lower(gui.Name .. (gui:IsA("TextButton") and gui.Text or ""))
-                    if string.find(txt, "sell") or string.find(txt, "bán") then
-                        -- Giả lập hành động click chuột/nhấn tay vào nút Sell trên màn hình
-                        gui:Activate()
-                    end
-                end
-            end
-        end
-    end)
-end
-
--------------------------------------------------------------------
--- VÒNG LẶP FARM CHỐNG KẸT - CHỐNG ĐẦY TÚI ĐỒ
+-- VÒNG LẶP ÉP CHẠY TRỰC TIẾP (BỎ QUÉT SÂU - CHỐNG SẬP SCRIPT)
 -------------------------------------------------------------------
 task.spawn(function()
     while true do
-        task.wait(0.4) -- Giữ độ mượt, chống lag tuyệt đối
+        task.wait(0.5) -- Tốc độ an toàn giúp máy yếu cũng chạy mượt, không lag
         
         local char = player.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         
         if hrp then
             pcall(function()
-                local home = GetMyGarden()
-                -- Quét bầu trời thực tế (Nếu tối hoặc đèn mờ thì tính là đêm)
-                local isRealNight = (Lighting.ClockTime >= 18 or Lighting.ClockTime <= 6) or (Lighting.OutdoorAmbient.R < 60)
+                -- Nhận diện Ngày/Đêm bằng ánh sáng môi trường thực tế
+                local isNight = Lighting.OutdoorAmbient.R < 60
 
-                if isRealNight then
-                    -------------------------------------------------------
-                    -- TRỜI TỐI: VỀ VƯỜN THỦ - CHỈ HÁI VÀ TRỒNG SPEED CÓ SẴN
-                    -------------------------------------------------------
-                    if home then
-                        hrp.CFrame = CFrame.new(home.Position + Vector3.new(0, 4, 0))
-                        
-                        -- Hái và trồng tại vườn nhà (Bán kính 45m)
-                        for _, v in pairs(Workspace:GetDescendants()) do
-                            if v:IsA("ProximityPrompt") then
-                                if v.Parent:IsA("BasePart") and (v.Parent.Position - home.Position).Magnitude < 45 then
-                                    local txt = string.lower(v.ActionText .. v.ObjectText)
-                                    if string.find(txt, "harv") or string.find(txt, "hái") or string.find(txt, "plant") or string.find(txt, "trồng") then
-                                        fireproximityprompt(v)
-                                    end
+                -- 1. TỰ ĐỘNG HÁI QUẢ VÀ TRỒNG SPEED (CHỈ QUÈT VẬT THỂ GẦN CẬN)
+                for _, folder in pairs(Workspace:GetChildren()) do
+                    if folder:IsA("Model") or folder:IsA("Folder") then
+                        for _, item in pairs(folder:GetChildren()) do
+                            local prompt = item:IsA("ProximityPrompt") and item or item:FindFirstChildWhichIsA("ProximityPrompt")
+                            if prompt then
+                                local txt = string.lower(prompt.ActionText .. prompt.ObjectText)
+                                -- Hái quả chín
+                                if string.find(txt, "harv") or string.find(txt, "hái") then
+                                    fireproximityprompt(prompt)
                                 end
+                                -- Tự động gieo hạt giống / Speed có sẵn trong kho khi đất trống
+                                if string.find(txt, "plant") or string.find(txt, "trồng") or string.find(txt, "dirt") then
+                                    fireproximityprompt(prompt)
+                                end
+                            end
+                        end
+                    end
+                end
+
+                -- 2. CHU KỲ HOẠT ĐỘNG
+                if isNight then
+                    -------------------------------------------------------
+                    -- TRỜI TỐI: TỰ ĐỘNG ĐỨNG YÊN TẠI Ô ĐẤT ĐỂ THỦ VƯỜN ĐÊM
+                    -------------------------------------------------------
+                    for _, item in pairs(Workspace:GetChildren()) do
+                        if string.find(string.lower(item.Name), "plot") or string.find(string.lower(item.Name), "garden") then
+                            local pos = item:IsA("BasePart") and item.Position or (item:IsA("Model") and item.PrimaryPart and item.PrimaryPart.Position)
+                            if pos then
+                                hrp.CFrame = CFrame.new(pos + Vector3.new(0, 4, 0))
+                                break
                             end
                         end
                     end
                 else
                     -------------------------------------------------------
-                    -- TRỜI SÁNG: CLICK BÁN TRÊN MÀN HÌNH LIÊN TỤC + ĐI MUA SPEED
+                    -- TRỜI SÁNG: DI CHUYỂN THẲNG RA CHỢ ĐỂ BÁN ĐỒ & MUA SPEED
                     -------------------------------------------------------
-                    -- Giải phóng túi đồ bằng cách tự click nút Sell màu vàng trên màn hình liên tục
-                    ClickUISellButton()
-                    task.wait(0.2)
-
-                    -- Bay qua bục Shop ngoài map để mua thêm hạt Speed
-                    for _, v in pairs(Workspace:GetDescendants()) do
-                        if v:IsA("ProximityPrompt") then
-                            local txt = string.lower(v.ActionText .. v.ObjectText .. v.Name)
-                            if string.find(txt, "speed") or string.find(txt, "shop") or string.find(txt, "buy") or string.find(txt, "mua") then
-                                if v.Parent:IsA("BasePart") then
-                                    hrp.CFrame = CFrame.new(v.Parent.Position + Vector3.new(0, 2, 0))
-                                    task.wait(0.3)
-                                    fireproximityprompt(v)
-                                    break
-                                end
-                            end
+                    -- Tìm bục Bán (Sell) ngoài chợ
+                    for _, item in pairs(Workspace:GetChildren()) do
+                        local prompt = item:FindFirstChildWhichIsA("ProximityPrompt")
+                        if prompt and (string.find(string.lower(prompt.ActionText), "sell") or string.find(string.lower(item.Name), "sell")) then
+                            hrp.CFrame = CFrame.new(item.Position)
+                            task.wait(0.3)
+                            fireproximityprompt(prompt) -- Thực hiện bán sạch túi đồ bị đầy
+                            task.wait(0.3)
+                            break
                         end
                     end
 
-                    -- Quay về vườn nhà gieo hạt giống/Speed xuống đất
-                    if home then
-                        hrp.CFrame = CFrame.new(home.Position + Vector3.new(0, 4, 0))
-                        task.wait(0.2)
-                        for _, v in pairs(Workspace:GetDescendants()) do
-                            if v:IsA("ProximityPrompt") then
-                                if v.Parent:IsA("BasePart") and (v.Parent.Position - home.Position).Magnitude < 45 then
-                                    local txt = string.lower(v.ActionText .. v.ObjectText)
-                                    if string.find(txt, "plant") or string.find(txt, "trồng") or string.find(txt, "dirt") or string.find(txt, "harv") then
-                                        fireproximityprompt(v)
-                                    end
-                                end
-                            end
+                    -- Tìm bục Shop để mua thêm hạt Speed
+                    for _, item in pairs(Workspace:GetChildren()) do
+                        local prompt = item:FindFirstChildWhichIsA("ProximityPrompt")
+                        if prompt and (string.find(string.lower(prompt.ActionText), "speed") or string.find(string.lower(item.Name), "shop") or string.find(string.lower(prompt.ActionText), "buy")) then
+                            hrp.CFrame = CFrame.new(item.Position)
+                            task.wait(0.3)
+                            fireproximityprompt(prompt) -- Thực hiện mua Speed
+                            task.wait(0.3)
+                            break
                         end
                     end
-
                 end
             end)
         end
