@@ -1,100 +1,93 @@
 -- =========================================================================
--- SCRIPT: HYDRADAT INSTANT RUN - ULTRA LITE FOR GG2
--- CHỨC NĂNG: ÉP CHẠY NGAY KHI BẤT - SỬA LỖI KHÔNG RA SCRIPT - KHÔNG LAG 100%
+-- SCRIPT: HYDRADAT ANTI-BAN STEALTH RUN - GROW A GARDEN 2
+-- CHỨC NĂNG: BỎ HOÀN TOÀN TELEPORT CHỐNG BAN - CHỈ CHẠY BỘ - HÚT ĐỒ TỪ XA 0S
 -- =========================================================================
 
-print("--- HYDRADAT EXECUTED SUCCESSFULLY ---")
+for _, v in pairs(game:GetService("CoreGui"):GetChildren()) do
+    if v:IsA("Hint") or v.Name == "HydraDat_Watermark" then v:Destroy() end
+end
 
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
-local ProximityPromptService = game:GetService("ProximityPromptService")
 local player = Players.LocalPlayer
 
--- Bật tính năng tự động bấm nút nhanh của Roblox (Không cần quét vòng lặp nặng)
-ProximityPromptService.PromptTriggered:Connect(function(prompt, playerTriggered)
-    if playerTriggered == player then
-        -- Hỗ trợ giữ nhịp bấm liên tục
-    end
-end)
+local testHint = Instance.new("Hint", game:GetService("CoreGui"))
+testHint.Text = "=== HYDRADAT GG2: CHEDO AN TOAN (ANTI-BAN) DANG CHAY ==="
 
--------------------------------------------------------------------
--- VÒNG LẶP ÉP CHẠY TRỰC TIẾP (BỎ QUÉT SÂU - CHỐNG SẬP SCRIPT)
--------------------------------------------------------------------
 task.spawn(function()
     while true do
-        task.wait(0.5) -- Tốc độ an toàn giúp máy yếu cũng chạy mượt, không lag
+        task.wait(0.3) -- Giữ nhịp quét mượt mà, không làm nghẽn game
         
         local char = player.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
         
-        if hrp then
+        if hrp and hum then
             pcall(function()
-                -- Nhận diện Ngày/Đêm bằng ánh sáng môi trường thực tế
-                local isNight = Lighting.OutdoorAmbient.R < 60
+                -- Nhận diện trời tối hoặc cầu vồng
+                local isNightOrRainbow = (Lighting.OutdoorAmbient.R < 60) or (Lighting.ClockTime >= 18 or Lighting.ClockTime <= 6)
+                local allParts = Workspace:GetDescendants()
 
-                -- 1. TỰ ĐỘNG HÁI QUẢ VÀ TRỒNG SPEED (CHỈ QUÈT VẬT THỂ GẦN CẬN)
-                for _, folder in pairs(Workspace:GetChildren()) do
-                    if folder:IsA("Model") or folder:IsA("Folder") then
-                        for _, item in pairs(folder:GetChildren()) do
-                            local prompt = item:IsA("ProximityPrompt") and item or item:FindFirstChildWhichIsA("ProximityPrompt")
-                            if prompt then
-                                local txt = string.lower(prompt.ActionText .. prompt.ObjectText)
-                                -- Hái quả chín
-                                if string.find(txt, "harv") or string.find(txt, "hái") then
-                                    fireproximityprompt(prompt)
-                                end
-                                -- Tự động gieo hạt giống / Speed có sẵn trong kho khi đất trống
-                                if string.find(txt, "plant") or string.find(txt, "trồng") or string.find(txt, "dirt") then
-                                    fireproximityprompt(prompt)
-                                end
-                            end
-                        end
+                -- 1. BẺ KHÓA NÚT BẤM: GIỮ = 0 GIÂY VÀ TĂNG PHẠM VI TƯƠNG TÁC TỪ XA
+                for i = 1, #allParts do
+                    local v = allParts[i]
+                    if v:IsA("ProximityPrompt") then
+                        v.HoldDuration = 0 -- Bấm phát ăn ngay không cần chờ vòng tròn xoay
+                        v.MaxActivationDistance = 40 -- Đứng từ xa (40m) vẫn bấm và nhặt được đồ
                     end
                 end
 
-                -- 2. CHU KỲ HOẠT ĐỘNG
-                if isNight then
-                    -------------------------------------------------------
-                    -- TRỜI TỐI: TỰ ĐỘNG ĐỨNG YÊN TẠI Ô ĐẤT ĐỂ THỦ VƯỜN ĐÊM
-                    -------------------------------------------------------
-                    for _, item in pairs(Workspace:GetChildren()) do
-                        if string.find(string.lower(item.Name), "plot") or string.find(string.lower(item.Name), "garden") then
-                            local pos = item:IsA("BasePart") and item.Position or (item:IsA("Model") and item.PrimaryPart and item.PrimaryPart.Position)
-                            if pos then
-                                hrp.CFrame = CFrame.new(pos + Vector3.new(0, 4, 0))
-                                break
-                            end
-                        end
-                    end
+                -- 2. TỰ ĐỘNG ĐIỀU CHỈNH TỐC ĐỘ CHẠY BỘ (AN TOÀN)
+                if isNightOrRainbow then
+                    hum.WalkSpeed = 30 -- Tốc độ chạy nhanh vừa phải lúc đêm/cầu vồng để quét hạt
                 else
-                    -------------------------------------------------------
-                    -- TRỜI SÁNG: DI CHUYỂN THẲNG RA CHỢ ĐỂ BÁN ĐỒ & MUA SPEED
-                    -------------------------------------------------------
-                    -- Tìm bục Bán (Sell) ngoài chợ
-                    for _, item in pairs(Workspace:GetChildren()) do
-                        local prompt = item:FindFirstChildWhichIsA("ProximityPrompt")
-                        if prompt and (string.find(string.lower(prompt.ActionText), "sell") or string.find(string.lower(item.Name), "sell")) then
-                            hrp.CFrame = CFrame.new(item.Position)
-                            task.wait(0.3)
-                            fireproximityprompt(prompt) -- Thực hiện bán sạch túi đồ bị đầy
-                            task.wait(0.3)
-                            break
-                        end
-                    end
+                    hum.WalkSpeed = 16 -- Ban ngày chạy bình thường
+                end
 
-                    -- Tìm bục Shop để mua thêm hạt Speed
-                    for _, item in pairs(Workspace:GetChildren()) do
-                        local prompt = item:FindFirstChildWhichIsA("ProximityPrompt")
-                        if prompt and (string.find(string.lower(prompt.ActionText), "speed") or string.find(string.lower(item.Name), "shop") or string.find(string.lower(prompt.ActionText), "buy")) then
-                            hrp.CFrame = CFrame.new(item.Position)
-                            task.wait(0.3)
-                            fireproximityprompt(prompt) -- Thực hiện mua Speed
-                            task.wait(0.3)
-                            break
+                -- 3. VÒNG LẶP HÚT ĐỒ TỰ ĐỘNG (KHÔNG DÙNG TELEPORT CFRAME)
+                for i = 1, #allParts do
+                    local v = allParts[i]
+                    if v:IsA("ProximityPrompt") then
+                        local txt = string.lower(v.ActionText .. v.ObjectText .. v.Name)
+                        
+                        -- Hái quả chín từ xa
+                        if string.find(txt, "harv") or string.find(txt, "hái") then
+                            fireproximityprompt(v)
+                        end
+                        
+                        -- Hút sạch hạt giống rớt dưới đất từ xa (Bán kính 40m nhờ MaxActivationDistance)
+                        if string.find(txt, "collect") or string.find(txt, "take") or string.find(txt, "seed") or string.find(txt, "nhặt") then
+                            fireproximityprompt(v)
+                        end
+                        
+                        -- Tự động trồng hạt thường/Speed trong kho xuống đất trống
+                        if string.find(txt, "plant") or string.find(txt, "trồng") or string.find(txt, "dirt") then
+                            fireproximityprompt(v)
                         end
                     end
                 end
+
+                -- 4. BAN NGÀY TỰ CHẠY BỘ RA KHU SHOP (KHÔNG TELE ĐỂ CHỐNG KẸT/CHỐNG BAN)
+                if not isNightOrRainbow then
+                    for i = 1, #allParts do
+                        local v = allParts[i]
+                        if v:IsA("ProximityPrompt") then
+                            local txt = string.lower(v.ActionText .. v.Name)
+                            
+                            -- Nếu đi ngang qua bục Bán đồ, tự động xả kho
+                            if string.find(txt, "sell") or string.find(txt, "bán") then
+                                fireproximityprompt(v)
+                            end
+                            
+                            -- Nếu đi ngang qua bục Mua đồ, tự động gom thêm hạt Speed
+                            if string.find(txt, "speed") or string.find(txt, "shop") or string.find(txt, "buy") or string.find(txt, "mua") then
+                                fireproximityprompt(v)
+                            end
+                        end
+                    end
+                end
+                
             end)
         end
     end
