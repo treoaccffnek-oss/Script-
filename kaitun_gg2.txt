@@ -1,6 +1,6 @@
 -- =========================================================================
--- SCRIPT: HYDRADAT BRUTE-FORCE UI CLICKER - GROW A GARDEN 2
--- CƠ CHẾ: QUÉT RỘNG TẤT CẢ NÚT UI TRÊN MÀN HÌNH ĐỂ CLICK ĐI BÁN/MUA/VỀ VƯỜN
+-- SCRIPT: HYDRADAT FAST-TWEEN SYSTEM - GROW A GARDEN 2
+-- CƠ CHẾ: LƯỚT SIÊU TỐC ĐẾN BỤC ĐỂ ÉP BÁN/MUA -> VỀ VƯỜN (FIX 100% TRƠ LỆNH)
 -- ĐỒ HỌA: CHỮ CẦU VỒNG LOANG MƯỢT GIỮA MÀN HÌNH - TOÀN BỘ SERVER MÀU XÁM KHỬ LAG
 -- =========================================================================
 
@@ -13,11 +13,12 @@ local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local VirtualUser = game:GetService("VirtualUser")
+local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
-local pgui = player:WaitForChild("PlayerGui")
 
 local lastAction = tick()
 local lastJump = tick()
+local myGardenPos = nil -- Tự động ghi nhớ vị trí vườn nhà bạn
 
 -------------------------------------------------------------------
 -- 2. TẠO TEXT CHỮ CẦU VỒNG LOANG DẦN MƯỢT MÀ GIỮA MÀN HÌNH
@@ -100,44 +101,18 @@ pcall(function()
     end)
 end)
 
--- HÀM QUÉT TOÀN DIỆN VÀ ÉP CLICK VÀO CÁC NÚT TẢN MẠN TRÊN MÀN HÌNH
-local function MasterClickUI(keywords)
-    local clicked = false
-    for _, v in pairs(pgui:GetDescendants()) do
-        if v:IsA("TextButton") or v:IsA("ImageButton") then
-            local target = false
-            local name = string.lower(v.Name)
-            local text = v:IsA("TextButton") and string.lower(v.Text) or ""
-            
-            -- Kiểm tra xem tên nút hoặc chữ trên nút có khớp từ khóa không
-            for _, kw in pairs(keywords) do
-                if string.find(name, kw) or string.find(text, kw) then
-                    target = true
-                    break
-                end
-            end
-            
-            -- Nếu khớp và nút đang hiển thị trên màn hình
-            if target and v.Visible and v.AbsoluteSize.X > 0 then
-                pcall(function()
-                    -- Kích hoạt mọi loại tín hiệu click có thể có
-                    firesignal(v.MouseButton1Click)
-                    firesignal(v.MouseButton1Down)
-                    firesignal(v.Activated)
-                    if getconnections then
-                        for _, con in pairs(getconnections(v.MouseButton1Click)) do con:Fire() end
-                        for _, con in pairs(getconnections(v.Activated)) do con:Fire() end
-                    end
-                end)
-                clicked = true
-            end
-        end
-    end
-    return clicked
+-- HÀM LƯỚT NHÂN VẬT MƯỢT MÀ KHÔNG BỊ PHÁT HIỆN
+local function TeleportTween(hrp, targetCFrame)
+    local distance = (hrp.Position - targetCFrame.Position).Magnitude
+    local speed = 150 -- Tốc độ lướt an toàn
+    local info = TweenInfo.new(distance / speed, Enum.EasingStyle.Linear)
+    local tween = TweenService:Create(hrp, info, {CFrame = targetCFrame})
+    tween:Play()
+    tween.Completed:Wait()
 end
 
 -------------------------------------------------------------------
--- 5. VÒNG LẶP HÀNH ĐỘNG TUẦN TỰ (SỬ DỤNG PHƯƠNG THỨC CLICK NÚT TRÊN UI)
+-- 5. VÒNG LẶP ÉP BUỘC DI CHUYỂN VÀ XỬ LÝ GIAO DỊCH
 -------------------------------------------------------------------
 task.spawn(function()
     while true do
@@ -148,8 +123,13 @@ task.spawn(function()
         local hum = char and char:FindFirstChildOfClass("Humanoid")
         
         if hrp and hum then
+            -- Ghi nhớ vị trí vườn lúc bắt đầu chạy
+            if not myGardenPos then
+                myGardenPos = hrp.CFrame
+            end
+
             pcall(function()
-                -- LỆNH NHẢY TỰ ĐỘNG MỖI 10 GIÂY
+                -- LỆNH NHẢY TỰ ĐỘNG
                 if tick() - lastJump >= 10 then
                     hum.Jump = true
                     lastJump = tick()
@@ -159,7 +139,7 @@ task.spawn(function()
                 local isNightOrRainbow = (Lighting.OutdoorAmbient.R < 60) or (Lighting.ClockTime >= 18 or Lighting.ClockTime <= 6)
                 local allParts = Workspace:GetDescendants()
 
-                -- SỬA THỜI GIAN GIỮ NÚT
+                -- CẤU HÌNH PROXIMITY
                 for i = 1, #allParts do
                     local v = allParts[i]
                     if v:IsA("ProximityPrompt") then
@@ -168,51 +148,44 @@ task.spawn(function()
                     end
                 end
 
-                -- CHU KỲ BẤM NÚT ĐI CHỢ BAN NGÀY (CỨ 8 GIÂY BẤM 1 LẦN)
+                -- CHU KỲ LƯỚT ĐI BÁN VÀ MUA (CỨ MỖI 10 GIÂY THỰC HIỆN 1 LẦN)
                 if not isNightOrRainbow then
-                    if tick() - lastAction >= 8 then
+                    if tick() - lastAction >= 10 then
                         
-                        -- BƯỚC A: Tìm và bấm nút Sell/Market ở trên màn hình để lại gần bục bán
-                        MasterClickUI({"sell", "market", "chợ", "bán", "teleport"})
-                        task.wait(1.5) -- Chờ game nhận lệnh click và đưa nhân vật đi
-                        
-                        -- Kích hoạt nút bấm Sell vật lý tại chỗ vừa tới
+                        -- BƯỚC 1: Lướt thẳng tới bục Bán (Sell)
                         for i = 1, #allParts do
                             local v = allParts[i]
                             if v:IsA("ProximityPrompt") and (string.find(string.lower(v.ActionText), "sell") or string.find(string.lower(v.Name), "sell")) then
-                                if (v.Parent.Position - hrp.Position).Magnitude < 40 then
-                                    fireproximityprompt(v)
-                                    task.wait(0.4)
-                                    break
-                                end
+                                TeleportTween(hrp, v.Parent.CFrame + Vector3.new(0, 3, 0))
+                                task.wait(0.3)
+                                fireproximityprompt(v)
+                                task.wait(0.5)
+                                break
                             end
                         end
 
-                        -- BƯỚC B: Tìm và bấm nút Shop/Speed ở trên màn hình để lại gần bục mua
-                        MasterClickUI({"shop", "speed", "buy", "mua", "seed"})
-                        task.wait(1.5) -- Chờ game đưa sang bục shop
-                        
-                        -- Kích hoạt nút bấm mua hạt Speed vật lý tại chỗ vừa tới
+                        -- BƯỚC 2: Lướt thẳng tới bục Mua (Shop/Speed)
                         for i = 1, #allParts do
                             local v = allParts[i]
                             if v:IsA("ProximityPrompt") and (string.find(string.lower(v.ActionText), "speed") or string.find(string.lower(v.Name), "shop") or string.find(string.lower(v.ActionText), "buy")) then
-                                if (v.Parent.Position - hrp.Position).Magnitude < 40 then
-                                    fireproximityprompt(v)
-                                    task.wait(0.4)
-                                    break
-                                end
+                                TeleportTween(hrp, v.Parent.CFrame + Vector3.new(0, 3, 0))
+                                task.wait(0.3)
+                                fireproximityprompt(v)
+                                task.wait(0.5)
+                                break
                             end
                         end
 
-                        -- BƯỚC C: Làm xong việc thì bấm nút Garden ở trên để biến về vườn trồng cây tiếp
-                        MasterClickUI({"garden", "plot", "home", "vườn", "my plot"})
-                        task.wait(1.5) -- Chờ biến về vườn an toàn
+                        -- BƯỚC 3: Lướt an toàn quay trở về vị trí vườn nhà
+                        if myGardenPos then
+                            TeleportTween(hrp, myGardenPos)
+                        end
                         
                         lastAction = tick()
                     end
                 end
 
-                -- TỰ ĐỘNG HÁI QUẢ VÀ NHẶT HẠT XUNG QUANH TỪ TỪ KHI ĐANG Ở VƯỜN
+                -- TỰ ĐỘNG HÁI QUẢ VÀ NHẶT HẠT XUNG QUANH VƯỜN
                 for i = 1, #allParts do
                     local v = allParts[i]
                     if v:IsA("ProximityPrompt") then
@@ -228,7 +201,7 @@ task.spawn(function()
                     end
                 end
 
-                -- TỰ ĐỘNG TRỒNG CÂY TỪ TỪ KHI ĐANG Ở VƯỜN
+                -- TỰ ĐỘNG TRỒNG CÂY TẠI VƯỜN
                 for i = 1, #allParts do
                     local v = allParts[i]
                     if v:IsA("ProximityPrompt") then
