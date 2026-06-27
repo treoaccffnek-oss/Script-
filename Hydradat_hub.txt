@@ -2,13 +2,13 @@
 -- CẤU HÌNH CÁ NHÂN CỦA BẠN
 -- =======================================================
 _G.TenCuaBan = "ｔｉｋｔｏｋ:ｈｙｄｒａｄａｔ"
-_G.IdAnhCuaBan = "rbxassetid://1893323185"
+-- Đã sửa lại định dạng ID ảnh chuẩn hệ thống Roblox để tránh bị lỗi không hiển thị
+_G.IdAnhCuaBan = "http://www.roblox.com/asset/?id=1893323185"
 
 _G.ThemeID = _G.ThemeID or nil
 if _G.AutoTranslate == nil then _G.AutoTranslate = false end
 if _G.SaveConfig == nil then _G.SaveConfig = true end
 
--- Lấy thông tin Map trực tiếp từ game hệ thống
 local placeId = game.PlaceId
 local UniverseID = game.GameId 
 
@@ -67,54 +67,51 @@ task.spawn(function()
 end)
 
 -- =======================================================
--- 2. TRÌNH QUÉT ĐÈ GIAO DIỆN PHÁP SƯ (ÉP CHÈN ẢNH VÀO FRAME)
+-- 2. TRÌNH QUÉT ĐÈ GIAO DIỆN BẢN SỬA LỖI ĐỊNH DẠNG ID
 -- =======================================================
 task.spawn(function()
     local CoreGui = game:GetService("CoreGui")
     for i = 1, 60 do 
-        task.wait(0.5) -- Quét liên tục trong 30 giây
+        task.wait(0.5)
         for _, v in pairs(CoreGui:GetDescendants()) do
             -- Ép đổi chữ tên Hub sang tên bạn
             if v:IsA("TextLabel") and (string.find(string.lower(v.Text), "real") or string.find(string.lower(v.Text), "kid") or string.find(string.lower(v.Text), "hub") or string.find(string.lower(v.Text), "overflow") or string.find(string.lower(v.Text), "bluex") or string.find(string.lower(v.Text), "leaf")) then
                 v.Text = _G.TenCuaBan
             end
             
-            -- Đổi ảnh nền cho ImageLabel có sẵn
+            -- Đè ảnh cho ImageLabel có sẵn
             if v:IsA("ImageLabel") and v.AbsoluteSize.X > 200 and v.Image ~= _G.IdAnhCuaBan then
                 if not string.find(string.lower(v.Name), "icon") and not string.find(string.lower(v.Name), "close") then
                     v.Image = _G.IdAnhCuaBan
-                    v.ImageTransparency = 0
+                    v.ImageTransparency = 0.1 -- Hơi mờ nhẹ để giữ nét thẩm mỹ
                     v.ScaleType = Enum.ScaleType.Crop
                 end
             end
 
-            -- ĐIỂM MỚI: Tự động chèn ảnh nền vào các Khung (Frame màu đen) lớn như trong ảnh
+            -- Tạo và đè ảnh lên Frame nền phẳng màu đen lớn
             if v:IsA("Frame") and v.AbsoluteSize.X > 400 and v.AbsoluteSize.Y > 250 then
-                -- Tránh quét nhầm các khung tàng hình hoặc khung hệ thống rỗng
                 if v.BackgroundTransparency < 1 and not v:FindFirstChild("HydraCustomBG") then
                     
-                    -- Tạo một nhãn ảnh nền mới
+                    -- Tạo ImageLabel mới đè lên làm nền
                     local newBG = Instance.new("ImageLabel")
                     newBG.Name = "HydraCustomBG"
                     newBG.Size = UDim2.new(1, 0, 1, 0)
                     newBG.Position = UDim2.new(0, 0, 0, 0)
                     newBG.Image = _G.IdAnhCuaBan
                     newBG.ScaleType = Enum.ScaleType.Crop
-                    newBG.ImageTransparency = 0.2 -- Độ mờ 0.2 giúp bạn vừa thấy cánh đồng lúa vừa nhìn rõ chữ menu
-                    newBG.ZIndex = v.ZIndex -- Đảm bảo nằm cùng tầng nền
+                    newBG.ImageTransparency = 0.2 -- Độ mờ nền ảnh
+                    newBG.ZIndex = v.ZIndex
                     
-                    -- Tự động bo góc ảnh theo góc bo của khung cũ nếu có
+                    -- Kế thừa bo góc
                     local uiCorner = v:FindFirstChildOfClass("UICorner")
                     if uiCorner then
                         local newCorner = uiCorner:Clone()
                         newCorner.Parent = newBG
                     end
                     
-                    -- Đẩy ảnh xuống dưới cùng để không che mất các nút bấm chữ nghĩa phía trên
+                    -- Làm trong suốt nền đen cũ để lộ ảnh mới ra
+                    v.BackgroundTransparency = 1 
                     newBG.Parent = v
-                    if v:FindFirstChildOfClass("UIStroke") then
-                        -- Giữ nguyên viền đẹp của Hub
-                    end
                 end
             end
         end
