@@ -2,8 +2,8 @@
 -- CẤU HÌNH CÁ NHÂN CỦA BẠN
 -- =======================================================
 _G.TenCuaBan = "ｔｉｋｔｏｋ:ｈｙｄｒａｄａｔ"
--- Đã cấu hình lại đường dẫn ảnh chuẩn để sửa lỗi trắng màn hình hệ thống
-_G.IdAnhCuaBan = "http://www.roblox.com/asset/?id=1893323185"
+-- Dùng định dạng rbxassetid chuẩn để hiện ảnh cánh đồng lúa
+_G.IdAnhCuaBan = "rbxassetid://1893323185" 
 
 _G.ThemeID = _G.ThemeID or nil
 if _G.AutoTranslate == nil then _G.AutoTranslate = false end
@@ -13,61 +13,43 @@ local placeId = game.PlaceId
 local UniverseID = game.GameId 
 
 -- =======================================================
--- 1. KIỂM TRA MAP VÀ LOAD SCRIPT TƯƠNG ỨNG
+-- 1. LOAD SCRIPT GAME MẶC ĐỊNH
 -- =======================================================
 task.spawn(function()
     if placeId == 7449423635 or placeId == 2753915549 or placeId == 4442272183 or placeId == 122478697296975 or placeId == 73902483975735 or UniverseID == 994732206 then
-        task.spawn(function() 
-            pcall(function()
-                loadstring(game:HttpGet("https://raw.githubusercontent.com/WhiteX1208/Scripts/refs/heads/main/CauTrom.luau"))() 
-            end)
-        end)
         loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/9b00c7743a97f0e815b4bbfe5fd9dc8b.lua"))()
-
     elseif placeId == 205224386 then
         loadstring(game:HttpGet("https://raw.githubusercontent.com/Dev-BlueX/BlueX-Hub/refs/heads/main/HideAndSeek.lua"))()
-
     elseif placeId == 116495829188952 or placeId == 70876832253163 then
         loadstring(game:HttpGet("https://raw.githubusercontent.com/Dev-BlueX/BlueX-Hub/main/DeadRails.lua"))()
-
     elseif UniverseID == 7436755782 then
         loadstring(game:HttpGet("https://raw.githubusercontent.com/Dev-BlueX/BlueX-Hub/refs/heads/main/GrowaGarden.lua"))()
-
     elseif UniverseID == 8316902627 then
         loadstring(game:HttpGet("https://raw.githubusercontent.com/Dev-BlueX/BlueX-Hub/refs/heads/main/PlantVsBrainrot.lua"))()
-
     elseif placeId == 111989938562194 then
         loadstring(game:HttpGet("https://raw.githubusercontent.com/Dev-BlueX/BlueX-Hub/refs/heads/main/BrainrotEvolution.luau"))()
-
     elseif placeId == 99567941238278 or placeId == 125009265613167 then
         loadstring(game:HttpGet("https://raw.githubusercontent.com/Dev-BlueX/BlueX-Hub/refs/heads/main/InkGame.lua"))()
-
     elseif UniverseID == 7709344486 then
         loadstring(game:HttpGet("https://raw.githubusercontent.com/Dev-BlueX/BlueX-Hub/refs/heads/main/StealaBrainrot.lua"))()
-
     elseif UniverseID == 7671049560 then
         loadstring(game:HttpGet("https://raw.githubusercontent.com/Dev-BlueX/BlueX-Hub/refs/heads/main/TheForge.lua"))()
-
     elseif UniverseID == 9363735110 then
         loadstring(game:HttpGet("https://raw.githubusercontent.com/Dev-BlueX/BlueX-Hub/refs/heads/main/EscapeTsunamiForBrainrots.lua"))()
-
     elseif UniverseID == 66654135 then
         loadstring(game:HttpGet("https://raw.githubusercontent.com/Dev-BlueX/BlueX-Hub/refs/heads/main/MurderMystery2.lua"))()
-
     elseif UniverseID == 9509842868 then
         loadstring(game:HttpGet('https://github.com/LeafHubAcademy/LeafHub/raw/refs/heads/main/WebhookGarden.lua'))()
         loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/1f518bc9ee3898897e477473eaae1bc6.lua"))()
-
     elseif UniverseID == 9186719164 then
         loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/1ced6af8034218dd95dd6f26b9fce62f.lua"))()
-
     elseif UniverseID == 10200395747 then
         loadstring(game:HttpGet("https://raw.githubusercontent.com/Dev-BlueX/...../refs/heads/main/GrowaGarden2.lua"))()
     end
 end)
 
 -- =======================================================
--- 2. TRÌNH QUÉT ĐÈ GIAO DIỆN CHUẨN ĐỊNH DẠNG (AN TOÀN)
+-- 2. ĐỔI TÊN & ÉP DÍNH ẢNH NỀN VÀO HUB (KHÔNG LO LỖI MÀN HÌNH)
 -- =======================================================
 task.spawn(function()
     local CoreGui = game:GetService("CoreGui")
@@ -75,38 +57,40 @@ task.spawn(function()
     for i = 1, 60 do 
         task.wait(0.5)
         for _, v in pairs(CoreGui:GetDescendants()) do
-            -- Kiểm tra từ khóa tiêu đề của Hub để nhận diện vị trí chính xác
+            -- 1. Nhận diện chữ của Hub để đổi tên
             if v:IsA("TextLabel") and (string.find(string.lower(v.Text), "real") or string.find(string.lower(v.Text), "kid") or string.find(string.lower(v.Text), "hub") or string.find(string.lower(v.Text), "overflow") or string.find(string.lower(v.Text), "bluex") or string.find(string.lower(v.Text), "leaf")) then
-                
-                -- Đổi tên thành Tiktok của bạn
                 v.Text = _G.TenCuaBan
                 
-                -- Dò tìm khung chứa menu thuộc Hub đó
-                local HubMainFrame = v:FindFirstAncestorOfClass("Frame") or v:FindFirstAncestorOfClass("ImageLabel")
-                
-                -- Chỉ tinh chỉnh nếu đối tượng nằm trong phân vùng Hub chính chủ
-                if HubMainFrame and HubMainFrame.AbsoluteSize.X > 300 and HubMainFrame.AbsoluteSize.Y > 200 then
+                -- 2. Tìm đúng cái khung Menu chính chứa dòng chữ đó
+                local MainHub = v:FindFirstAncestorOfClass("Frame")
+                if MainHub and MainHub.AbsoluteSize.X > 300 and MainHub.AbsoluteSize.Y > 200 then
                     
-                    if HubMainFrame:IsA("Frame") and not HubMainFrame:FindFirstChild("HydraCustomBG") then
-                        local newBG = Instance.new("ImageLabel")
-                        newBG.Name = "HydraCustomBG"
-                        newBG.Size = UDim2.new(1, 0, 1, 0)
-                        newBG.Image = _G.IdAnhCuaBan
-                        newBG.ScaleType = Enum.ScaleType.Crop
-                        newBG.ImageTransparency = 0.25 -- Độ mờ nền hợp lý
-                        newBG.ZIndex = HubMainFrame.ZIndex
+                    -- Nếu chưa có ảnh nền độc lập thì tạo mới và dán đè lên
+                    if not MainHub:FindFirstChild("HydraGlowBG") then
+                        -- Tạo ảnh nền
+                        local img = Instance.new("ImageLabel")
+                        img.Name = "HydraGlowBG"
+                        img.Size = UDim2.new(1, 0, 1, 0)
+                        img.Position = UDim2.new(0, 0, 0, 0)
+                        img.Image = _G.IdAnhCuaBan
+                        img.ScaleType = Enum.ScaleType.Crop
+                        img.BackgroundTransparency = 1
+                        img.ImageTransparency = 0.3 -- Độ mờ 0.3 để vừa thấy ảnh vừa thấy nút bấm
                         
-                        -- Đồng bộ bo góc
-                        local uiCorner = HubMainFrame:FindFirstChildOfClass("UICorner")
-                        if uiCorner then uiCorner:Clone().Parent = newBG end
+                        -- Ép tầng hiển thị nằm dưới chữ nhưng đè lên nền đen cũ
+                        img.ZIndex = v.ZIndex - 1 
                         
-                        HubMainFrame.BackgroundTransparency = 1 
-                        newBG.Parent = HubMainFrame
+                        -- Bo góc theo menu gốc
+                        local corner = MainHub:FindFirstChildOfClass("UICorner")
+                        if corner then
+                            corner:Clone().Parent = img
+                        end
                         
-                    elseif HubMainFrame:IsA("ImageLabel") and HubMainFrame.Image ~= _G.IdAnhCuaBan then
-                        HubMainFrame.Image = _G.IdAnhCuaBan
-                        HubMainFrame.ImageTransparency = 0.15
-                        HubMainFrame.ScaleType = Enum.ScaleType.Crop
+                        -- Dán chặt vào Menu Hub
+                        img.Parent = MainHub
+                        
+                        -- Làm mờ nhẹ nền đen gốc để hiện ảnh rõ hơn
+                        MainHub.BackgroundTransparency = 0.5
                     end
                 end
             end
