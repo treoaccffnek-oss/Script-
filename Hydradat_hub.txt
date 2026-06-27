@@ -2,7 +2,8 @@
 -- CẤU HÌNH CÁ NHÂN CỦA BẠN
 -- =======================================================
 _G.TenCuaBan = "ｔｉｋｔｏｋ:ｈｙｄｒａｄａｔ"
-_G.IdAnhCuaBan = "rbxassetid://1893323185"
+-- Đã cấu hình lại đường dẫn ảnh chuẩn để sửa lỗi trắng màn hình hệ thống
+_G.IdAnhCuaBan = "http://www.roblox.com/asset/?id=1893323185"
 
 _G.ThemeID = _G.ThemeID or nil
 if _G.AutoTranslate == nil then _G.AutoTranslate = false end
@@ -66,7 +67,7 @@ task.spawn(function()
 end)
 
 -- =======================================================
--- 2. TRÌNH QUÉT ĐÈ GIAO DIỆN (ĐÃ FIX LỖI TRẮNG MÀN HÌNH GAME)
+-- 2. TRÌNH QUÉT ĐÈ GIAO DIỆN CHUẨN ĐỊNH DẠNG (AN TOÀN)
 -- =======================================================
 task.spawn(function()
     local CoreGui = game:GetService("CoreGui")
@@ -74,37 +75,37 @@ task.spawn(function()
     for i = 1, 60 do 
         task.wait(0.5)
         for _, v in pairs(CoreGui:GetDescendants()) do
-            -- Chỉ can thiệp nếu tìm thấy chữ liên quan đến tên của Hub (BlueX, Leaf, Kid, Real...)
+            -- Kiểm tra từ khóa tiêu đề của Hub để nhận diện vị trí chính xác
             if v:IsA("TextLabel") and (string.find(string.lower(v.Text), "real") or string.find(string.lower(v.Text), "kid") or string.find(string.lower(v.Text), "hub") or string.find(string.lower(v.Text), "overflow") or string.find(string.lower(v.Text), "bluex") or string.find(string.lower(v.Text), "leaf")) then
                 
-                -- Đổi chữ tiêu đề thành tên Tiktok của bạn
+                -- Đổi tên thành Tiktok của bạn
                 v.Text = _G.TenCuaBan
                 
-                -- TỪ ĐÂY: Dò ngược lên trên để tìm đúng cái Khung Menu chính của bản Hub đó
+                -- Dò tìm khung chứa menu thuộc Hub đó
                 local HubMainFrame = v:FindFirstAncestorOfClass("Frame") or v:FindFirstAncestorOfClass("ImageLabel")
                 
-                -- Kiểm tra nếu tìm thấy Khung Hub và nó lớn (đúng là cái menu bảng đen)
+                -- Chỉ tinh chỉnh nếu đối tượng nằm trong phân vùng Hub chính chủ
                 if HubMainFrame and HubMainFrame.AbsoluteSize.X > 300 and HubMainFrame.AbsoluteSize.Y > 200 then
                     
-                    -- CHỈ đổi màu/ảnh của chính cái Khung Hub này, bảo vệ toàn bộ màn hình game
                     if HubMainFrame:IsA("Frame") and not HubMainFrame:FindFirstChild("HydraCustomBG") then
                         local newBG = Instance.new("ImageLabel")
                         newBG.Name = "HydraCustomBG"
                         newBG.Size = UDim2.new(1, 0, 1, 0)
                         newBG.Image = _G.IdAnhCuaBan
                         newBG.ScaleType = Enum.ScaleType.Crop
-                        newBG.ImageTransparency = 0.2 -- Độ mờ ảnh nền vừa phải để nhìn rõ menu
+                        newBG.ImageTransparency = 0.25 -- Độ mờ nền hợp lý
                         newBG.ZIndex = HubMainFrame.ZIndex
                         
+                        -- Đồng bộ bo góc
                         local uiCorner = HubMainFrame:FindFirstChildOfClass("UICorner")
                         if uiCorner then uiCorner:Clone().Parent = newBG end
                         
-                        HubMainFrame.BackgroundTransparency = 1 -- Làm trong suốt nền đen gốc
+                        HubMainFrame.BackgroundTransparency = 1 
                         newBG.Parent = HubMainFrame
                         
                     elseif HubMainFrame:IsA("ImageLabel") and HubMainFrame.Image ~= _G.IdAnhCuaBan then
                         HubMainFrame.Image = _G.IdAnhCuaBan
-                        HubMainFrame.ImageTransparency = 0.1
+                        HubMainFrame.ImageTransparency = 0.15
                         HubMainFrame.ScaleType = Enum.ScaleType.Crop
                     end
                 end
