@@ -2,8 +2,7 @@
 -- CẤU HÌNH CÁ NHÂN CỦA BẠN
 -- =======================================================
 _G.TenCuaBan = "ｔｉｋｔｏｋ:ｈｙｄｒａｄａｔ"
--- Dùng định dạng rbxassetid chuẩn để hiện ảnh cánh đồng lúa
-_G.IdAnhCuaBan = "rbxassetid://1893323185" 
+_G.IdAnhCuaBan = "rbxassetid://1893323185" -- Ảnh cánh đồng lúa của bạn
 
 _G.ThemeID = _G.ThemeID or nil
 if _G.AutoTranslate == nil then _G.AutoTranslate = false end
@@ -49,7 +48,7 @@ task.spawn(function()
 end)
 
 -- =======================================================
--- 2. ĐỔI TÊN & ÉP DÍNH ẢNH NỀN VÀO HUB (KHÔNG LO LỖI MÀN HÌNH)
+-- 2. ĐỔI TÊN MENU, BANNER TRONG VÀ NÚT BẬT TẮT ĐANG BAY NGOÀI
 -- =======================================================
 task.spawn(function()
     local CoreGui = game:GetService("CoreGui")
@@ -57,42 +56,37 @@ task.spawn(function()
     for i = 1, 60 do 
         task.wait(0.5)
         for _, v in pairs(CoreGui:GetDescendants()) do
-            -- 1. Nhận diện chữ của Hub để đổi tên
+            
+            -- [1]. QUÉT ĐỔI ẢNH NÚT BẬT TẮT ĐANG BAY NGOÀI MÀN HÌNH
+            -- Nhận diện dựa vào kích thước nhỏ (thường tầm 40-70 pixel) và có chứa logo đám mây cũ của BlueX bên trong ScreenGui độc lập
+            if v:IsA("ImageLabel") and v.AbsoluteSize.X > 30 and v.AbsoluteSize.X < 80 and v.Image ~= "" and v.Image ~= _G.IdAnhCuaBan then
+                -- Đảm bảo không đè nhầm các icon chức năng hệ thống Roblox
+                if not string.find(string.lower(v.Name), "close") and v.Parent:IsA("GuiButton") or v.Parent:IsA("ImageButton") then
+                    v.Image = _G.IdAnhCuaBan
+                    v.ImageTransparency = 0
+                    v.ScaleType = Enum.ScaleType.Crop
+                end
+            end
+
+            -- [2]. QUÉT ĐỔI TÊN TIÊU ĐỀ & BANNER LỚN TRONG MENU
             if v:IsA("TextLabel") and (string.find(string.lower(v.Text), "real") or string.find(string.lower(v.Text), "kid") or string.find(string.lower(v.Text), "hub") or string.find(string.lower(v.Text), "overflow") or string.find(string.lower(v.Text), "bluex") or string.find(string.lower(v.Text), "leaf")) then
                 v.Text = _G.TenCuaBan
                 
-                -- 2. Tìm đúng cái khung Menu chính chứa dòng chữ đó
+                -- Truy quét vào sâu bên trong menu lớn để đổi ảnh banner chính giữa
                 local MainHub = v:FindFirstAncestorOfClass("Frame")
-                if MainHub and MainHub.AbsoluteSize.X > 300 and MainHub.AbsoluteSize.Y > 200 then
-                    
-                    -- Nếu chưa có ảnh nền độc lập thì tạo mới và dán đè lên
-                    if not MainHub:FindFirstChild("HydraGlowBG") then
-                        -- Tạo ảnh nền
-                        local img = Instance.new("ImageLabel")
-                        img.Name = "HydraGlowBG"
-                        img.Size = UDim2.new(1, 0, 1, 0)
-                        img.Position = UDim2.new(0, 0, 0, 0)
-                        img.Image = _G.IdAnhCuaBan
-                        img.ScaleType = Enum.ScaleType.Crop
-                        img.BackgroundTransparency = 1
-                        img.ImageTransparency = 0.3 -- Độ mờ 0.3 để vừa thấy ảnh vừa thấy nút bấm
-                        
-                        -- Ép tầng hiển thị nằm dưới chữ nhưng đè lên nền đen cũ
-                        img.ZIndex = v.ZIndex - 1 
-                        
-                        -- Bo góc theo menu gốc
-                        local corner = MainHub:FindFirstChildOfClass("UICorner")
-                        if corner then
-                            corner:Clone().Parent = img
+                if MainHub then
+                    for _, child in pairs(MainHub:GetDescendants()) do
+                        if child:IsA("ImageLabel") and child.Image ~= "" and child.Image ~= _G.IdAnhCuaBan then
+                            if not string.find(string.lower(child.Name), "close") then
+                                child.Image = _G.IdAnhCuaBan
+                                child.ImageTransparency = 0
+                                child.ImageColor3 = Color3.fromRGB(255, 255, 255)
+                                child.ScaleType = Enum.ScaleType.Crop
+                            end
                         end
-                        
-                        -- Dán chặt vào Menu Hub
-                        img.Parent = MainHub
-                        
-                        -- Làm mờ nhẹ nền đen gốc để hiện ảnh rõ hơn
-                        MainHub.BackgroundTransparency = 0.5
                     end
                 end
+                
             end
         end
     end
