@@ -1,5 +1,5 @@
 -- =======================================================
--- CẤU HÌNH CÁ CHÂN CỦA BẠN
+-- CẤU HÌNH CÁ NHÂN CỦA BẠN
 -- =======================================================
 _G.TenCuaBan = "ｔｉｋｔｏｋ:ｈｙｄｒａｄａｔ"
 _G.IdAnhCuaBan = "rbxassetid://1893323185"
@@ -67,31 +67,53 @@ task.spawn(function()
 end)
 
 -- =======================================================
--- 2. TRÌNH QUÉT ĐÈ GIAO DIỆN BẢN NÂNG CẤP (ÉP ĐỔI ẢNH)
+-- 2. TRÌNH QUÉT ĐÈ GIAO DIỆN PHÁP SƯ (ÉP CHÈN ẢNH VÀO FRAME)
 -- =======================================================
 task.spawn(function()
     local CoreGui = game:GetService("CoreGui")
     for i = 1, 60 do 
-        task.wait(0.5) -- Quét liên tục trong 30 giây để đảm bảo UI load xong là đè luôn
+        task.wait(0.5) -- Quét liên tục trong 30 giây
         for _, v in pairs(CoreGui:GetDescendants()) do
             -- Ép đổi chữ tên Hub sang tên bạn
             if v:IsA("TextLabel") and (string.find(string.lower(v.Text), "real") or string.find(string.lower(v.Text), "kid") or string.find(string.lower(v.Text), "hub") or string.find(string.lower(v.Text), "overflow") or string.find(string.lower(v.Text), "bluex") or string.find(string.lower(v.Text), "leaf")) then
                 v.Text = _G.TenCuaBan
             end
             
-            -- Ép đổi ảnh nền (Quét mọi ImageLabel có khả năng làm nền)
-            if v:IsA("ImageLabel") then
-                -- Cách 1: Đoán theo kích thước (Ảnh nền thông thường sẽ chiếm diện tích lớn trên màn hình hoặc menu)
-                local sizeX = v.AbsoluteSize.X
-                local sizeY = v.AbsoluteSize.Y
-                
-                -- Nếu ảnh có kích thước lớn hơn 200x200 pixel (thường là khung chính hoặc nền)
-                if (sizeX > 200 and sizeY > 200) or string.find(string.lower(v.Name), "bg") or string.find(string.lower(v.Name), "back") or string.find(string.lower(v.Name), "main") or v.Image ~= "" then
-                    -- Bỏ qua các icon nhỏ hoặc ảnh rỗng
-                    if not string.find(string.lower(v.Name), "icon") and not string.find(string.lower(v.Name), "close") and v.Image ~= _G.IdAnhCuaBan then
-                        v.Image = _G.IdAnhCuaBan
-                        v.ImageTransparency = 0
-                        v.ScaleType = Enum.ScaleType.Crop
+            -- Đổi ảnh nền cho ImageLabel có sẵn
+            if v:IsA("ImageLabel") and v.AbsoluteSize.X > 200 and v.Image ~= _G.IdAnhCuaBan then
+                if not string.find(string.lower(v.Name), "icon") and not string.find(string.lower(v.Name), "close") then
+                    v.Image = _G.IdAnhCuaBan
+                    v.ImageTransparency = 0
+                    v.ScaleType = Enum.ScaleType.Crop
+                end
+            end
+
+            -- ĐIỂM MỚI: Tự động chèn ảnh nền vào các Khung (Frame màu đen) lớn như trong ảnh
+            if v:IsA("Frame") and v.AbsoluteSize.X > 400 and v.AbsoluteSize.Y > 250 then
+                -- Tránh quét nhầm các khung tàng hình hoặc khung hệ thống rỗng
+                if v.BackgroundTransparency < 1 and not v:FindFirstChild("HydraCustomBG") then
+                    
+                    -- Tạo một nhãn ảnh nền mới
+                    local newBG = Instance.new("ImageLabel")
+                    newBG.Name = "HydraCustomBG"
+                    newBG.Size = UDim2.new(1, 0, 1, 0)
+                    newBG.Position = UDim2.new(0, 0, 0, 0)
+                    newBG.Image = _G.IdAnhCuaBan
+                    newBG.ScaleType = Enum.ScaleType.Crop
+                    newBG.ImageTransparency = 0.2 -- Độ mờ 0.2 giúp bạn vừa thấy cánh đồng lúa vừa nhìn rõ chữ menu
+                    newBG.ZIndex = v.ZIndex -- Đảm bảo nằm cùng tầng nền
+                    
+                    -- Tự động bo góc ảnh theo góc bo của khung cũ nếu có
+                    local uiCorner = v:FindFirstChildOfClass("UICorner")
+                    if uiCorner then
+                        local newCorner = uiCorner:Clone()
+                        newCorner.Parent = newBG
+                    end
+                    
+                    -- Đẩy ảnh xuống dưới cùng để không che mất các nút bấm chữ nghĩa phía trên
+                    newBG.Parent = v
+                    if v:FindFirstChildOfClass("UIStroke") then
+                        -- Giữ nguyên viền đẹp của Hub
                     end
                 end
             end
