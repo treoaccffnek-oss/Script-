@@ -1,5 +1,5 @@
 -- =======================================================
--- CẤU HÌNH CÁ NHÂN CỦA BẠN
+-- CẤU HÌNH CÁ CHÂN CỦA BẠN
 -- =======================================================
 _G.TenCuaBan = "ｔｉｋｔｏｋ:ｈｙｄｒａｄａｔ"
 _G.IdAnhCuaBan = "rbxassetid://1893323185"
@@ -8,7 +8,7 @@ _G.ThemeID = _G.ThemeID or nil
 if _G.AutoTranslate == nil then _G.AutoTranslate = false end
 if _G.SaveConfig == nil then _G.SaveConfig = true end
 
--- Lấy thông tin Map trực tiếp từ game hệ thống (Mượt + Không lỗi)
+-- Lấy thông tin Map trực tiếp từ game hệ thống
 local placeId = game.PlaceId
 local UniverseID = game.GameId 
 
@@ -17,7 +17,6 @@ local UniverseID = game.GameId
 -- =======================================================
 task.spawn(function()
     if placeId == 7449423635 or placeId == 2753915549 or placeId == 4442272183 or placeId == 122478697296975 or placeId == 73902483975735 or UniverseID == 994732206 then
-        -- Chạy ngầm script hỗ trợ bằng task.spawn
         task.spawn(function() 
             pcall(function()
                 loadstring(game:HttpGet("https://raw.githubusercontent.com/WhiteX1208/Scripts/refs/heads/main/CauTrom.luau"))() 
@@ -68,22 +67,33 @@ task.spawn(function()
 end)
 
 -- =======================================================
--- 2. TRÌNH QUÉT ĐÈ GIAO DIỆN CHẠY NGẦM (BẢN UPDATE)
+-- 2. TRÌNH QUÉT ĐÈ GIAO DIỆN BẢN NÂNG CẤP (ÉP ĐỔI ẢNH)
 -- =======================================================
 task.spawn(function()
     local CoreGui = game:GetService("CoreGui")
-    for i = 1, 50 do 
-        task.wait(0.5) -- Quét liên tục trong khoảng 25 giây sau khi mở game
+    for i = 1, 60 do 
+        task.wait(0.5) -- Quét liên tục trong 30 giây để đảm bảo UI load xong là đè luôn
         for _, v in pairs(CoreGui:GetDescendants()) do
-            -- Tự động đổi chữ hiển thị thành tên của bạn
-            if v:IsA("TextLabel") and (string.find(string.lower(v.Text), "real") or string.find(string.lower(v.Text), "kid") or string.find(string.lower(v.Text), "hub") or string.find(string.lower(v.Text), "overflow") or string.find(string.lower(v.Text), "bluex")) then
+            -- Ép đổi chữ tên Hub sang tên bạn
+            if v:IsA("TextLabel") and (string.find(string.lower(v.Text), "real") or string.find(string.lower(v.Text), "kid") or string.find(string.lower(v.Text), "hub") or string.find(string.lower(v.Text), "overflow") or string.find(string.lower(v.Text), "bluex") or string.find(string.lower(v.Text), "leaf")) then
                 v.Text = _G.TenCuaBan
             end
-            -- Tự động đổi ảnh nền UI thành ảnh cánh đồng lúa của bạn
-            if v:IsA("ImageLabel") and (string.find(string.lower(v.Name), "bg") or string.find(string.lower(v.Name), "background") or string.find(string.lower(v.Name), "main") or string.find(string.lower(v.Name), "frame")) then
-                v.Image = _G.IdAnhCuaBan
-                v.ImageTransparency = 0
-                v.ScaleType = Enum.ScaleType.Crop
+            
+            -- Ép đổi ảnh nền (Quét mọi ImageLabel có khả năng làm nền)
+            if v:IsA("ImageLabel") then
+                -- Cách 1: Đoán theo kích thước (Ảnh nền thông thường sẽ chiếm diện tích lớn trên màn hình hoặc menu)
+                local sizeX = v.AbsoluteSize.X
+                local sizeY = v.AbsoluteSize.Y
+                
+                -- Nếu ảnh có kích thước lớn hơn 200x200 pixel (thường là khung chính hoặc nền)
+                if (sizeX > 200 and sizeY > 200) or string.find(string.lower(v.Name), "bg") or string.find(string.lower(v.Name), "back") or string.find(string.lower(v.Name), "main") or v.Image ~= "" then
+                    -- Bỏ qua các icon nhỏ hoặc ảnh rỗng
+                    if not string.find(string.lower(v.Name), "icon") and not string.find(string.lower(v.Name), "close") and v.Image ~= _G.IdAnhCuaBan then
+                        v.Image = _G.IdAnhCuaBan
+                        v.ImageTransparency = 0
+                        v.ScaleType = Enum.ScaleType.Crop
+                    end
+                end
             end
         end
     end
