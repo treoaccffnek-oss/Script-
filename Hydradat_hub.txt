@@ -1,0 +1,90 @@
+-- =======================================================
+-- CẤU HÌNH CÁ NHÂN CỦA BẠN
+-- =======================================================
+_G.TenCuaBan = "ｔｉｋｔｏｋ:ｈｙｄｒａｄａｔ"
+_G.IdAnhCuaBan = "rbxassetid://1893323185"
+
+_G.ThemeID = _G.ThemeID or nil
+if _G.AutoTranslate == nil then _G.AutoTranslate = false end
+if _G.SaveConfig == nil then _G.SaveConfig = true end
+
+-- Lấy thông tin Map trực tiếp từ game hệ thống (Mượt + Không lỗi)
+local placeId = game.PlaceId
+local UniverseID = game.GameId 
+
+-- =======================================================
+-- 1. KIỂM TRA MAP VÀ LOAD SCRIPT TƯƠNG ỨNG
+-- =======================================================
+task.spawn(function()
+    if placeId == 7449423635 or placeId == 2753915549 or placeId == 4442272183 or placeId == 122478697296975 or placeId == 73902483975735 or UniverseID == 994732206 then
+        -- Chạy ngầm script hỗ trợ bằng task.spawn
+        task.spawn(function() 
+            pcall(function()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/WhiteX1208/Scripts/refs/heads/main/CauTrom.luau"))() 
+            end)
+        end)
+        loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/9b00c7743a97f0e815b4bbfe5fd9dc8b.lua"))()
+
+    elseif placeId == 205224386 then
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/Dev-BlueX/BlueX-Hub/refs/heads/main/HideAndSeek.lua"))()
+
+    elseif placeId == 116495829188952 or placeId == 70876832253163 then
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/Dev-BlueX/BlueX-Hub/main/DeadRails.lua"))()
+
+    elseif UniverseID == 7436755782 then
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/Dev-BlueX/BlueX-Hub/refs/heads/main/GrowaGarden.lua"))()
+
+    elseif UniverseID == 8316902627 then
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/Dev-BlueX/BlueX-Hub/refs/heads/main/PlantVsBrainrot.lua"))()
+
+    elseif placeId == 111989938562194 then
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/Dev-BlueX/BlueX-Hub/refs/heads/main/BrainrotEvolution.luau"))()
+
+    elseif placeId == 99567941238278 or placeId == 125009265613167 then
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/Dev-BlueX/BlueX-Hub/refs/heads/main/InkGame.lua"))()
+
+    elseif UniverseID == 7709344486 then
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/Dev-BlueX/BlueX-Hub/refs/heads/main/StealaBrainrot.lua"))()
+
+    elseif UniverseID == 7671049560 then
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/Dev-BlueX/BlueX-Hub/refs/heads/main/TheForge.lua"))()
+
+    elseif UniverseID == 9363735110 then
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/Dev-BlueX/BlueX-Hub/refs/heads/main/EscapeTsunamiForBrainrots.lua"))()
+
+    elseif UniverseID == 66654135 then
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/Dev-BlueX/BlueX-Hub/refs/heads/main/MurderMystery2.lua"))()
+
+    elseif UniverseID == 9509842868 then
+        loadstring(game:HttpGet('https://github.com/LeafHubAcademy/LeafHub/raw/refs/heads/main/WebhookGarden.lua'))()
+        loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/1f518bc9ee3898897e477473eaae1bc6.lua"))()
+
+    elseif UniverseID == 9186719164 then
+        loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/1ced6af8034218dd95dd6f26b9fce62f.lua"))()
+
+    elseif UniverseID == 10200395747 then
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/Dev-BlueX/...../refs/heads/main/GrowaGarden2.lua"))()
+    end
+end)
+
+-- =======================================================
+-- 2. TRÌNH QUÉT ĐÈ GIAO DIỆN CHẠY NGẦM (BẢN UPDATE)
+-- =======================================================
+task.spawn(function()
+    local CoreGui = game:GetService("CoreGui")
+    for i = 1, 50 do 
+        task.wait(0.5) -- Quét liên tục trong khoảng 25 giây sau khi mở game
+        for _, v in pairs(CoreGui:GetDescendants()) do
+            -- Tự động đổi chữ hiển thị thành tên của bạn
+            if v:IsA("TextLabel") and (string.find(string.lower(v.Text), "real") or string.find(string.lower(v.Text), "kid") or string.find(string.lower(v.Text), "hub") or string.find(string.lower(v.Text), "overflow") or string.find(string.lower(v.Text), "bluex")) then
+                v.Text = _G.TenCuaBan
+            end
+            -- Tự động đổi ảnh nền UI thành ảnh cánh đồng lúa của bạn
+            if v:IsA("ImageLabel") and (string.find(string.lower(v.Name), "bg") or string.find(string.lower(v.Name), "background") or string.find(string.lower(v.Name), "main") or string.find(string.lower(v.Name), "frame")) then
+                v.Image = _G.IdAnhCuaBan
+                v.ImageTransparency = 0
+                v.ScaleType = Enum.ScaleType.Crop
+            end
+        end
+    end
+end)
