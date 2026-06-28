@@ -24,7 +24,7 @@ local RunService = game:GetService("RunService")
 local pgui = player:WaitForChild("PlayerGui")
 local camera = workspace.CurrentCamera
 
-if pgui:FindFirstChild("ZenHub_Final") then pgui.ZenHub_Final:Destroy() end
+if pgui:FindFirstChild("HYDRADAT_Final") then pgui.ZenHub_Final:Destroy() end
 
 local MasterGui = Instance.new("ScreenGui")
 MasterGui.Name = "TIKTOK : HYDRADAT"
@@ -73,7 +73,7 @@ CloseBtn.ZIndex = 3
 
 local Title = Instance.new("TextLabel", MainFrame)
 Title.Size = UDim2.new(1, 0, 0, 40)
-Title.Text = "𝙏𝙄𝙆𝙏𝙊𝙆:𝙃𝙔𝘿𝙍𝘼𝘿𝘼𝙏" 
+Title.Text = "TIKTOK : HYDRADAT" 
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.BackgroundTransparency = 1
 Title.Font = Enum.Font.GothamBold
