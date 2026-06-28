@@ -1,21 +1,7 @@
--- ZEN-HUBv10 + CUSTOM BACKGROUND & NAME
 repeat wait() until game:IsLoaded()
 
--- =======================================================
--- CẤU HÌNH CÁ NHÂN CỦA BẠN (BẠN CÓ THỂ TỰ SỬA Ở ĐÂY)
--- =======================================================
-local TenChinhSua = "ｔｉｋｔｏｋ:ｈｙｄｒａｄａｔ" -- Đã đổi tên cho bạn ở đây
-local IdAnhChinhSua = "rbxassetid://1893323185" -- ID ảnh cánh đồng lúa của bạn
-
-local player = game.Players.LocalPlayer
-local RunService = game:GetService("RunService")
-local pgui = player:WaitForChild("PlayerGui")
-local camera = workspace.CurrentCamera
-
--- --- HÀM CHAT TỰ ĐỘNG ---
 local function AutoChat(msg)
     task.spawn(function()
-        task.wait(0.5)
         local TextChatService = game:GetService("TextChatService")
         if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
             local channel = TextChatService.TextChannels.RBXGeneral
@@ -31,10 +17,13 @@ local function AutoChat(msg)
     end)
 end
 
--- Nhắn tên script lên khung chat
-AutoChat(TenChinhSua)
+AutoChat("ｔｉｋｔｏｋ:ｈｙｄｒａｄａｔ")
 
--- Xóa bản cũ để tránh trùng lặp UI
+local player = game.Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local pgui = player:WaitForChild("PlayerGui")
+local camera = workspace.CurrentCamera
+
 if pgui:FindFirstChild("ZenHub_Final") then pgui.ZenHub_Final:Destroy() end
 
 local MasterGui = Instance.new("ScreenGui")
@@ -42,14 +31,13 @@ MasterGui.Name = "ZenHub_Final"
 MasterGui.Parent = pgui
 MasterGui.ResetOnSpawn = false
 
--- --- NÚT TRÒN MỞ MENU ---
 local OpenBtn = Instance.new("ImageButton")
 OpenBtn.Name = "FloatingBtn"
 OpenBtn.Parent = MasterGui
 OpenBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 OpenBtn.Position = UDim2.new(0.05, 0, 0.4, 0)
 OpenBtn.Size = UDim2.new(0, 55, 0, 55) 
-OpenBtn.Image = IdAnhChinhSua -- Đã nạp ảnh cánh đồng lúa
+OpenBtn.Image = "rbxassetid://1893323185" 
 OpenBtn.ScaleType = Enum.ScaleType.Crop
 OpenBtn.Active = true
 OpenBtn.Draggable = true 
@@ -59,14 +47,13 @@ local BtnStroke = Instance.new("UIStroke", OpenBtn)
 BtnStroke.Color = Color3.fromRGB(255, 255, 255)
 BtnStroke.Thickness = 2
 
--- --- MENU CHÍNH (DẠNG ẢNH NỀN) ---
 local MainFrame = Instance.new("ImageLabel") 
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = MasterGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-MainFrame.Image = IdAnhChinhSua -- Đã nạp ảnh cánh đồng lúa làm nền menu
+MainFrame.Image = "rbxassetid://84445562222849" 
 MainFrame.ScaleType = Enum.ScaleType.Crop
-MainFrame.ImageTransparency = 0.25 -- Độ mờ nền (0.25 giúp nhìn rõ ảnh và rõ cả chữ)
+MainFrame.ImageTransparency = 0.25 
 MainFrame.Position = UDim2.new(0.15, 0, 0.3, 0)
 MainFrame.Size = UDim2.new(0, 230, 0, 380)
 MainFrame.Visible = false 
@@ -86,12 +73,31 @@ CloseBtn.ZIndex = 3
 
 local Title = Instance.new("TextLabel", MainFrame)
 Title.Size = UDim2.new(1, 0, 0, 40)
-Title.Text = TenChinhSua -- Đã đổi tên hiển thị trên menu thành tên của bạn
+Title.Text = "ZEN-HUBv10" 
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.BackgroundTransparency = 1
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 14
 Title.ZIndex = 3
+
+local UIGradient = Instance.new("UIGradient", Title)
+UIGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+    ColorSequenceKeypoint.new(0.2, Color3.fromRGB(255, 255, 0)),
+    ColorSequenceKeypoint.new(0.4, Color3.fromRGB(0, 255, 0)),
+    ColorSequenceKeypoint.new(0.6, Color3.fromRGB(0, 255, 255)),
+    ColorSequenceKeypoint.new(0.8, Color3.fromRGB(0, 0, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 255))
+})
+
+task.spawn(function()
+    local offset = 0
+    RunService.RenderStepped:Connect(function(dt)
+        offset = offset + (dt * 0.5)
+        if offset > 1 then offset = offset - 1 end
+        UIGradient.Offset = Vector2.new(-offset, 0)
+    end)
+end)
 
 local ScrollingFrame = Instance.new("ScrollingFrame", MainFrame)
 ScrollingFrame.Size = UDim2.new(1, -20, 1, -120)
@@ -104,10 +110,12 @@ ScrollingFrame.ZIndex = 3
 local UIListLayout = Instance.new("UIListLayout", ScrollingFrame)
 UIListLayout.Padding = UDim.new(0, 5)
 
-OpenBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
+OpenBtn.MouseButton1Click:Connect(function() 
+    MainFrame.Visible = not MainFrame.Visible 
+end)
+
 CloseBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false end)
 
--- --- ANTI FLING ---
 local AntiFlingEnabled = false
 local IsFlinging = false 
 
@@ -141,7 +149,6 @@ AntiFlingBtn.MouseButton1Click:Connect(function()
     AntiFlingBtn.BackgroundColor3 = AntiFlingEnabled and Color3.fromRGB(0, 170, 127) or Color3.fromRGB(60, 20, 20)
 end)
 
--- --- CHỨC NĂNG FLING 3D ---
 local function flingPlayer(targetPlayer, statusDot)
     local char = player.Character
     local lrp = char and char:FindFirstChild("HumanoidRootPart")
