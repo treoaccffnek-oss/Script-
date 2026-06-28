@@ -27,7 +27,7 @@ local camera = workspace.CurrentCamera
 if pgui:FindFirstChild("ZenHub_Final") then pgui.ZenHub_Final:Destroy() end
 
 local MasterGui = Instance.new("ScreenGui")
-MasterGui.Name = "𝙏𝙄𝙆𝙏𝙊𝙆:𝙃𝙔𝘿𝙍𝘼𝘿𝘼𝙏"
+MasterGui.Name = "TIKTOK : HYDRADAT"
 MasterGui.Parent = pgui
 MasterGui.ResetOnSpawn = false
 
