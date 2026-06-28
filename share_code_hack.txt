@@ -23,14 +23,18 @@ namespace AntiGameTest
         private bool isMenuOpen = true; 
         private bool isNoClipActive = false;
 
-        // Dữ liệu nhập sẵn ban đầu
+        // Điền sẵn tên và ID mặc định, vào game tự nhận luôn không cần nhập thêm
         private string id👍 = "84445562222849";
         private string tên👽 = "Tester_Player"; 
 
         void Update()
         {
+            // Bấm nút 'V' để tắt/mở Menu
             if (Input.GetKeyDown(KeyCode.V)) isMenuOpen = !isMenuOpen;
 
+            if (!isNoClipActive) return;
+
+            // Chỉ khi nào bạn bấm nút bật NoClip thì nó mới đi tìm nhân vật để xử lý vật lý
             if (player == null)
             {
                 player = GameObject.FindWithTag("Player");
@@ -39,14 +43,13 @@ namespace AntiGameTest
                     myRb = FindObjectOfType<Rigidbody>();
                     if (myRb != null) player = myRb.gameObject;
                 }
-                return;
             }
 
-            if (myRb == null) myRb = player.GetComponent<Rigidbody>();
-            if (myCollider == null) myCollider = player.GetComponent<Collider>();
-
-            if (isNoClipActive && player != null)
+            if (player != null)
             {
+                if (myRb == null) myRb = player.GetComponent<Rigidbody>();
+                if (myCollider == null) myCollider = player.GetComponent<Collider>();
+
                 if (myCollider) myCollider.isTrigger = true;
                 if (myRb) myRb.useGravity = false;
 
@@ -60,9 +63,10 @@ namespace AntiGameTest
 
         void OnGUI()
         {
+            // Menu mở độc lập, không phụ thuộc vào việc có tìm thấy người chơi hay chưa
             if (!isMenuOpen) return;
 
-            // Tạo màn hình nền đen bao phủ trò chơi
+            // Phủ đen màn hình
             Texture2D blackTexture = new Texture2D(1, 1);
             blackTexture.SetPixel(0, 0, Color.black);
             blackTexture.Apply();
@@ -71,49 +75,46 @@ namespace AntiGameTest
 
             Vector2 screenCenter = new Vector2(Screen.width / 2, Screen.height / 2);
             
-            // Khung chứa Menu điều khiển ở giữa màn hình
             GUI.backgroundColor = Color.gray;
             GUI.contentColor = Color.white;
             GUI.Box(new Rect(screenCenter.x - 150, screenCenter.y - 110, 300, 220), "⚙️ SERVER TESTER");
 
-            // Nút bấm X để đóng nhanh menu
             GUI.backgroundColor = Color.red;
             if (GUI.Button(new Rect(screenCenter.x + 115, screenCenter.y - 105, 30, 25), "X")) isMenuOpen = false;
 
-            // Ô NHẬP LIỆU (Trên màn hình)
             GUI.backgroundColor = Color.white;
             GUI.contentColor = Color.black; 
             id👍 = GUI.TextField(new Rect(screenCenter.x - 130, screenCenter.y - 65, 260, 30), id👍);
             tên👽 = GUI.TextField(new Rect(screenCenter.x - 130, screenCenter.y - 25, 260, 30), tên👽);
 
-            // Đường kẻ trang trí menu
             GUI.backgroundColor = Color.black;
             GUI.Box(new Rect(screenCenter.x - 130, screenCenter.y + 15, 260, 2), "");
 
-            // Đổi chữ trên nút bấm về lại màu trắng cho dễ đọc
             GUI.contentColor = Color.white;
 
-            // ====================================================================
-            // ĐÃ SỬA: NÚT SỐ 1 LẤY LUÔN "tên👽" LÀM TÊN NÚT VÀ CHẠY NOCLIP
-            // ====================================================================
+            // Nút số 1 mang tên hiển thị của bạn
             GUI.backgroundColor = isNoClipActive ? Color.green : Color.darkGray;
             if (GUI.Button(new Rect(screenCenter.x - 130, screenCenter.y + 25, 260, 30), tên👽))
             {
                 isNoClipActive = !isNoClipActive;
-                if (!isNoClipActive) 
+                if (!isNoClipActive && player != null) 
                 {
                     if (myCollider) myCollider.isTrigger = false;
                     if (myRb) myRb.useGravity = true;
                 }
             }
 
-            // ====================================================================
-            // ĐÃ SỬA: NÚT SỐ 2 LẤY LUÔN "id👍" LÀM TÊN NÚT VÀ CHẠY FLING
-            // ====================================================================
+            // Nút số 2 mang số ID hiển thị của bạn
             GUI.backgroundColor = Color.red;
             if (GUI.Button(new Rect(screenCenter.x - 130, screenCenter.y + 65, 260, 30), id👍))
             {
-                if (myRb)
+                if (player == null)
+                {
+                    player = GameObject.FindWithTag("Player");
+                    myRb = FindObjectOfType<Rigidbody>();
+                }
+                
+                if (myRb != null)
                 {
                     isNoClipActive = false; 
                     if (myCollider) myCollider.isTrigger = false;
