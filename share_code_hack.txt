@@ -1,127 +1,188 @@
-using UnityEngine;
+-- ====================================================================
+-- ROBLOX LUA SCRIPT - SERVER TESTER MENU
+-- ====================================================================
 
-namespace AntiGameTest
-{
-    public class Loader
-    {
-        private static GameObject _load;
+local Player = game.Players.LocalPlayer
+local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
 
-        public static void Load()
-        {
-            _load = new GameObject();
-            _load.AddComponent<CheatInstance>();
-            Object.DontDestroyOnLoad(_load);
-        }
-    }
+-- Xóa Menu cũ nếu có để tránh trùng lặp
+if CoreGui:FindFirstChild("ServerTesterGui") then
+    CoreGui.ServerTesterGui:Destroy()
+end
 
-    public class CheatInstance : MonoBehaviour
-    {
-        private GameObject player;
-        private Rigidbody myRb;
-        private Collider myCollider;
+-- 1. TẠO GIAO DIỆN (GUI)
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ServerTesterGui"
+ScreenGui.Parent = CoreGui
+ScreenGui.ResetOnSpawn = false
 
-        private bool isMenuOpen = true; 
-        private bool isNoClipActive = false;
+-- MÀN HÌNH NỀN ĐEN TUYỀN CHE TOÀN BỘ GAME
+local BlackBackground = Instance.new("Frame")
+BlackBackground.Size = UDim2.new(1, 0, 1, 0)
+BlackBackground.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+BlackBackground.BorderSizePixel = 0
+BlackBackground.Active = true
+BlackBackground.Parent = ScreenGui
 
-        // Điền sẵn tên và ID mặc định, vào game tự nhận luôn không cần nhập thêm
-        private string id👍 = "84445562222849";
-        private string tên👽 = "Tester_Player"; 
+-- KHUNG MENU CHÍNH Ở GIỮA
+local MainMenu = Instance.new("Frame")
+MainMenu.Size = UDim2.new(0, 300, 0, 240)
+MainMenu.Position = UDim2.new(0.5, -150, 0.5, -120)
+MainMenu.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+MainMenu.BorderSizePixel = 0
+MainMenu.Active = true
+MainMenu.Draggable = true -- Bạn có thể giữ chuột kéo menu di chuyển được
+MainMenu.Parent = BlackBackground
 
-        void Update()
-        {
-            // Bấm nút 'V' để tắt/mở Menu
-            if (Input.GetKeyDown(KeyCode.V)) isMenuOpen = !isMenuOpen;
+-- TIÊU ĐỀ MENU
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -40, 0, 30)
+Title.Position = UDim2.new(0, 10, 0, 5)
+Title.Text = "⚙️ SERVER TESTER"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.BackgroundTransparency = 1
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 18
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = MainMenu
 
-            if (!isNoClipActive) return;
+-- NÚT ĐÓNG MENU (X)
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 30, 0, 25)
+CloseButton.Position = UDim2.new(1, -35, 0, 5)
+CloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.Font = Enum.Font.SourceSansBold
+CloseButton.TextSize = 16
+CloseButton.Parent = MainMenu
 
-            // Chỉ khi nào bạn bấm nút bật NoClip thì nó mới đi tìm nhân vật để xử lý vật lý
-            if (player == null)
-            {
-                player = GameObject.FindWithTag("Player");
-                if (player == null)
-                {
-                    myRb = FindObjectOfType<Rigidbody>();
-                    if (myRb != null) player = myRb.gameObject;
-                }
-            }
+-- Ô NHẬP 1: ID (Mặc định điền sẵn dãy số của bạn)
+local IdTextBox = Instance.new("TextBox")
+IdTextBox.Size = UDim2.new(0, 260, 0, 30)
+IdTextBox.Position = UDim2.new(0, 20, 0, 45)
+IdTextBox.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+IdTextBox.Text = "84445562222849"
+IdTextBox.TextColor3 = Color3.fromRGB(0, 0, 0)
+IdTextBox.Font = Enum.Font.SourceSans
+IdTextBox.TextSize = 16
+IdTextBox.ClearTextOnFocus = false
+IdTextBox.Parent = MainMenu
 
-            if (player != null)
-            {
-                if (myRb == null) myRb = player.GetComponent<Rigidbody>();
-                if (myCollider == null) myCollider = player.GetComponent<Collider>();
+-- Ô NHẬP 2: TÊN (Mặc định điền sẵn Tester_Player)
+local NameTextBox = Instance.new("TextBox")
+NameTextBox.Size = UDim2.new(0, 260, 0, 30)
+NameTextBox.Position = UDim2.new(0, 20, 0, 85)
+NameTextBox.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+NameTextBox.Text = "Tester_Player"
+NameTextBox.TextColor3 = Color3.fromRGB(0, 0, 0)
+NameTextBox.Font = Enum.Font.SourceSans
+NameTextBox.TextSize = 16
+NameTextBox.ClearTextOnFocus = false
+NameTextBox.Parent = MainMenu
 
-                if (myCollider) myCollider.isTrigger = true;
-                if (myRb) myRb.useGravity = false;
+-- ĐƯỜNG KẺ NGĂN CÁCH
+local Line = Instance.new("Frame")
+Line.Size = UDim2.new(0, 260, 0, 2)
+Line.Position = UDim2.new(0, 20, 0, 125)
+Line.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Line.BorderSizePixel = 0
+Line.Parent = MainMenu
 
-                float speed = 15f;
-                Vector3 move = new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical"));
-                if (Input.GetKey(KeyCode.Space)) move.y = 1;         
-                if (Input.GetKey(KeyCode.LeftControl)) move.y = -1;    
-                player.transform.Translate(move * speed * Time.deltaTime);
-            }
-        }
+-- NÚT 1: CHẠY NOCLIP (Tên nút tự đổi theo ô nhập Tên)
+local NoClipBtn = Instance.new("TextButton")
+NoClipBtn.Size = UDim2.new(0, 260, 0, 35)
+NoClipBtn.Position = UDim2.new(0, 20, 0, 140)
+NoClipBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+NoClipBtn.Text = NameTextBox.Text
+NoClipBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+NoClipBtn.Font = Enum.Font.SourceSansBold
+NoClipBtn.TextSize = 16
+NoClipBtn.Parent = MainMenu
 
-        void OnGUI()
-        {
-            // Menu mở độc lập, không phụ thuộc vào việc có tìm thấy người chơi hay chưa
-            if (!isMenuOpen) return;
+-- NÚT 2: CHẠY FLING (Tên nút tự đổi theo ô nhập ID)
+local FlingBtn = Instance.new("TextButton")
+FlingBtn.Size = UDim2.new(0, 260, 0, 35)
+FlingBtn.Position = UDim2.new(0, 20, 0, 185)
+FlingBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+FlingBtn.Text = IdTextBox.Text
+FlingBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+FlingBtn.Font = Enum.Font.SourceSansBold
+FlingBtn.TextSize = 16
+FlingBtn.Parent = MainMenu
 
-            // Phủ đen màn hình
-            Texture2D blackTexture = new Texture2D(1, 1);
-            blackTexture.SetPixel(0, 0, Color.black);
-            blackTexture.Apply();
-            GUI.skin.box.normal.background = blackTexture;
-            GUI.Box(new Rect(0, 0, Screen.width, Screen.height), GUIContent.none);
+-- ====================================================================
+-- 2. ĐỒNG BỘ CHỮ TỪ Ô NHẬP XUỐNG NÚT BẤM
+-- ====================================================================
+NameTextBox:GetPropertyChangedSignal("Text"):Connect(function()
+    NoClipBtn.Text = NameTextBox.Text
+end)
 
-            Vector2 screenCenter = new Vector2(Screen.width / 2, Screen.height / 2);
-            
-            GUI.backgroundColor = Color.gray;
-            GUI.contentColor = Color.white;
-            GUI.Box(new Rect(screenCenter.x - 150, screenCenter.y - 110, 300, 220), "⚙️ SERVER TESTER");
+IdTextBox:GetPropertyChangedSignal("Text"):Connect(function()
+    FlingBtn.Text = IdTextBox.Text
+end)
 
-            GUI.backgroundColor = Color.red;
-            if (GUI.Button(new Rect(screenCenter.x + 115, screenCenter.y - 105, 30, 25), "X")) isMenuOpen = false;
+-- 3. ĐÓNG / MỞ MENU BẰNG PHÍM 'V' HOẶC NÚT X
+local menuOpen = true
+local function ToggleMenu()
+    menuOpen = !menuOpen
+    BlackBackground.Visible = menuOpen
+end
 
-            GUI.backgroundColor = Color.white;
-            GUI.contentColor = Color.black; 
-            id👍 = GUI.TextField(new Rect(screenCenter.x - 130, screenCenter.y - 65, 260, 30), id👍);
-            tên👽 = GUI.TextField(new Rect(screenCenter.x - 130, screenCenter.y - 25, 260, 30), tên👽);
+CloseButton.MouseButton1Click:Connect(ToggleMenu)
+game:GetService("UserInputService").InputBegan:Connect(function(input, chat)
+    if not chat and input.KeyCode == Enum.KeyCode.V then
+        ToggleMenu()
+    end
+end)
 
-            GUI.backgroundColor = Color.black;
-            GUI.Box(new Rect(screenCenter.x - 130, screenCenter.y + 15, 260, 2), "");
+-- ====================================================================
+-- 4. XỬ LÝ CHỨC NĂNG LOGIC TRONG ROBLOX
+-- ====================================================================
+local noclipActive = false
 
-            GUI.contentColor = Color.white;
+-- Logic NoClip (Xuyên tường) cho Roblox
+RunService.Stepped:Connect(function()
+    if noclipActive and Player.Character then
+        for _, part in pairs(Player.Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
 
-            // Nút số 1 mang tên hiển thị của bạn
-            GUI.backgroundColor = isNoClipActive ? Color.green : Color.darkGray;
-            if (GUI.Button(new Rect(screenCenter.x - 130, screenCenter.y + 25, 260, 30), tên👽))
-            {
-                isNoClipActive = !isNoClipActive;
-                if (!isNoClipActive && player != null) 
-                {
-                    if (myCollider) myCollider.isTrigger = false;
-                    if (myRb) myRb.useGravity = true;
-                }
-            }
+NoClipBtn.MouseButton1Click:Connect(function()
+    noclipActive = !noclipActive
+    if noclipActive then
+        NoClipBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 50) -- Bật lên màu xanh lá
+    else
+        NoClipBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)  -- Tắt đi màu xám
+    end
+end)
 
-            // Nút số 2 mang số ID hiển thị của bạn
-            GUI.backgroundColor = Color.red;
-            if (GUI.Button(new Rect(screenCenter.x - 130, screenCenter.y + 65, 260, 30), id👍))
-            {
-                if (player == null)
-                {
-                    player = GameObject.FindWithTag("Player");
-                    myRb = FindObjectOfType<Rigidbody>();
-                }
-                
-                if (myRb != null)
-                {
-                    isNoClipActive = false; 
-                    if (myCollider) myCollider.isTrigger = false;
-                    myRb.useGravity = true;
-                    myRb.AddForce(Vector3.up * 9999f, ForceMode.Impulse);
-                }
-            }
-        }
-    }
-}
+-- Logic Fling (Tự văng lên trời) cho Roblox
+FlingBtn.MouseButton1Click:Connect(function()
+    local Character = Player.Character
+    local HumanoidRootPart = Character and Character:FindFirstChild("HumanoidRootPart")
+    
+    if HumanoidRootPart then
+        noclipActive = false
+        NoClipBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+        
+        -- Tạo một lực đẩy cực mạnh hướng lên trên để làm văng nhân vật
+        local VelocityInstance = Instance.new("LinearVelocity")
+        local Attachment = Instance.new("Attachment")
+        
+        Attachment.Parent = HumanoidRootPart
+        VelocityInstance.MaxForce = math.huge
+        VelocityInstance.VectorVelocity = Vector3.new(0, 500, 0) -- Đẩy văng thẳng lên trời
+        VelocityInstance.Attachment0 = Attachment
+        VelocityInstance.Parent = HumanoidRootPart
+        
+        task.wait(0.2)
+        VelocityInstance:Destroy()
+        Attachment:Destroy()
+    end
+end)
