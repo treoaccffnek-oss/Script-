@@ -1,0 +1,126 @@
+using UnityEngine;
+
+namespace AntiGameTest
+{
+    public class Loader
+    {
+        private static GameObject _load;
+
+        public static void Load()
+        {
+            _load = new GameObject();
+            _load.AddComponent<CheatInstance>();
+            Object.DontDestroyOnLoad(_load);
+        }
+    }
+
+    public class CheatInstance : MonoBehaviour
+    {
+        private GameObject player;
+        private Rigidbody myRb;
+        private Collider myCollider;
+
+        private bool isMenuOpen = true; 
+        private bool isNoClipActive = false;
+
+        // Dữ liệu nhập sẵn ban đầu
+        private string id👍 = "84445562222849";
+        private string tên👽 = "Tester_Player"; 
+
+        void Update()
+        {
+            if (Input.GetKeyDown(KeyCode.V)) isMenuOpen = !isMenuOpen;
+
+            if (player == null)
+            {
+                player = GameObject.FindWithTag("Player");
+                if (player == null)
+                {
+                    myRb = FindObjectOfType<Rigidbody>();
+                    if (myRb != null) player = myRb.gameObject;
+                }
+                return;
+            }
+
+            if (myRb == null) myRb = player.GetComponent<Rigidbody>();
+            if (myCollider == null) myCollider = player.GetComponent<Collider>();
+
+            if (isNoClipActive && player != null)
+            {
+                if (myCollider) myCollider.isTrigger = true;
+                if (myRb) myRb.useGravity = false;
+
+                float speed = 15f;
+                Vector3 move = new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical"));
+                if (Input.GetKey(KeyCode.Space)) move.y = 1;         
+                if (Input.GetKey(KeyCode.LeftControl)) move.y = -1;    
+                player.transform.Translate(move * speed * Time.deltaTime);
+            }
+        }
+
+        void OnGUI()
+        {
+            if (!isMenuOpen) return;
+
+            // Tạo màn hình nền đen bao phủ trò chơi
+            Texture2D blackTexture = new Texture2D(1, 1);
+            blackTexture.SetPixel(0, 0, Color.black);
+            blackTexture.Apply();
+            GUI.skin.box.normal.background = blackTexture;
+            GUI.Box(new Rect(0, 0, Screen.width, Screen.height), GUIContent.none);
+
+            Vector2 screenCenter = new Vector2(Screen.width / 2, Screen.height / 2);
+            
+            // Khung chứa Menu điều khiển ở giữa màn hình
+            GUI.backgroundColor = Color.gray;
+            GUI.contentColor = Color.white;
+            GUI.Box(new Rect(screenCenter.x - 150, screenCenter.y - 110, 300, 220), "⚙️ SERVER TESTER");
+
+            // Nút bấm X để đóng nhanh menu
+            GUI.backgroundColor = Color.red;
+            if (GUI.Button(new Rect(screenCenter.x + 115, screenCenter.y - 105, 30, 25), "X")) isMenuOpen = false;
+
+            // Ô NHẬP LIỆU (Trên màn hình)
+            GUI.backgroundColor = Color.white;
+            GUI.contentColor = Color.black; 
+            id👍 = GUI.TextField(new Rect(screenCenter.x - 130, screenCenter.y - 65, 260, 30), id👍);
+            tên👽 = GUI.TextField(new Rect(screenCenter.x - 130, screenCenter.y - 25, 260, 30), tên👽);
+
+            // Đường kẻ trang trí menu
+            GUI.backgroundColor = Color.black;
+            GUI.Box(new Rect(screenCenter.x - 130, screenCenter.y + 15, 260, 2), "");
+
+            // Đổi chữ trên nút bấm về lại màu trắng cho dễ đọc
+            GUI.contentColor = Color.white;
+
+            // ====================================================================
+            // ĐÃ SỬA: NÚT SỐ 1 LẤY LUÔN "tên👽" LÀM TÊN NÚT VÀ CHẠY NOCLIP
+            // ====================================================================
+            GUI.backgroundColor = isNoClipActive ? Color.green : Color.darkGray;
+            if (GUI.Button(new Rect(screenCenter.x - 130, screenCenter.y + 25, 260, 30), tên👽))
+            {
+                isNoClipActive = !isNoClipActive;
+                if (!isNoClipActive) 
+                {
+                    if (myCollider) myCollider.isTrigger = false;
+                    if (myRb) myRb.useGravity = true;
+                }
+            }
+
+            // ====================================================================
+            // ĐÃ SỬA: NÚT SỐ 2 LẤY LUÔN "id👍" LÀM TÊN NÚT VÀ CHẠY FLING
+            // ====================================================================
+            GUI.backgroundColor = Color.red;
+            if (GUI.Button(new Rect(screenCenter.x - 130, screenCenter.y + 65, 260, 30), id👍))
+            {
+                if (myRb)
+                {
+                    isNoClipActive = false; 
+                    if (myCollider) myCollider.isTrigger = false;
+                    myRb.useGravity = true;
+                    myRb.AddForce(Vector3.up * 9999f, ForceMode.Impulse);
+                }
+            }
+        }
+    }
+}
